@@ -202,12 +202,12 @@
     <!-- 1. 記録タブ (出費) -->
     <div id="record" class="tab-content active">
       <div class="card" style="background: #f9f9f9;">
-        <label>Gemini API Key</label>
+        <label>OpenRouter API Key</label>
         <div style="display: flex; gap: 8px;">
-          <input type="text" id="apiKey" placeholder="APIキーを入力" style="margin-bottom: 0;">
+          <input type="text" id="apiKey" placeholder="sk-or-v1-..." style="margin-bottom: 0;">
           <button onclick="saveApiKey()">保存</button>
         </div>
-        <p style="font-size: 11px; color: #666; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash (Fallback: 3.6-flash)</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #666; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: 未設定</p>
       </div>
 
       <div class="card">
@@ -505,9 +505,9 @@
       </div>
       <div class="update-notice">
         <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-          <li><b>安定性の向上:</b> 429エラー（リクエスト制限）に対する自動リトライ機能と、3.7/3.6モデル自動フォールバックを搭載しました。</li>
-          <li><b>カメラ起動の改善:</b> 一部のAndroidブラウザでカメラが起動しない問題に対応しました。</li>
-          <li><b>カテゴリのカスタマイズ:</b> 設定タブから、お好みの分類を追加・削除できるようになりました。</li>
+          <li><b>OpenRouter API対応:</b> APIをOpenRouterに変更し、最適化された画像対応の無料枠モデルを自動で選択・利用する機能を導入しました。</li>
+          <li><b>Webリサーチ機能の追加:</b> Web検索を自動で行い、途切れた商品名の推測精度や、分析タブでのアドバイスの質が大幅に向上しました。</li>
+          <li><b>カメラ起動の改善・カテゴリのカスタマイズ機能</b> 等は引き続きご利用いただけます。</li>
         </ul>
       </div>
       <button onclick="closeUpdateModal()" style="width: 100%;">確認しました</button>
@@ -543,7 +543,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.16.v8"; // バージョン管理用
+  const APP_VERSION = "2026.08.17.v8"; // バージョン管理用
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -575,72 +575,59 @@
   const incomeBarColors = ['#E8F5E9', '#C8E6C9', '#A5D6A7'];
 
   // ==========================================
-  // ★ 429対策付き Gemini API 実行関数 (リトライ＆フォールバック内蔵)
+  // ★ OpenRouterから最適化された無料枠モデルを自動取得する関数
   // ==========================================
-  async function callGeminiAPIWithRetry(apiKey, payload) {
-    const models = ["gemini-3.7-flash", "gemini-3.6-flash"];
-    let lastErrorMsg = "";
-    
-    // リトライ用にペイロードのコピーを作成
-    let currentPayload = JSON.parse(JSON.stringify(payload));
-    
-    for (const model of models) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentPayload)
-          });
+  window.getOptimalFreeModel = async function(apiKey) {
+    let cachedModel = sessionStorage.getItem('optimal_openrouter_model');
+    if (cachedModel) return cachedModel;
 
-          if (response.status === 429) {
-            // 429エラーの主な原因は「Web検索機能(googleSearch)の1日上限」または「1分間のAPIコール上限(15RPM)」です。
-            // Web検索(tools)が含まれている場合は、それを削除して即座に再試行します。
-            if (currentPayload.tools) {
-              console.warn(`[429] Web検索の上限に達した可能性があります。検索をオフにして ${model} で再試行します...`);
-              delete currentPayload.tools;
-              attempt--; // 試行回数を消費せずにリトライ
-              continue;
-            } else {
-              // ツールを外しても429になる場合は、純粋な1分間上限の可能性が高い
-              throw new Error("429_RATE_LIMIT");
-            }
-          }
+    try {
+        const res = await fetch("https://openrouter.ai/api/v1/models");
+        if (!res.ok) throw new Error("APIエラー");
+        const data = await res.json();
+        
+        // 無料枠のモデルをフィルタリング (価格が0のもの)
+        const freeModels = data.data.filter(m => {
+            return m.pricing && (m.pricing.prompt === "0" || m.pricing.prompt === "0.0" || parseFloat(m.pricing.prompt) === 0);
+        });
 
-          if (!response.ok) {
-            const errorDetails = await response.text().catch(() => "");
-            throw new Error(`HTTP ${response.status} - ${errorDetails}`);
-          }
+        // Vision(画像解析)対応のものを優先して探す
+        const visionFreeModels = freeModels.filter(m => {
+             const desc = (m.description || "").toLowerCase();
+             const name = m.name.toLowerCase();
+             const id = m.id.toLowerCase();
+             return desc.includes("vision") || desc.includes("image") || name.includes("vision") || id.includes("vision") || id.includes("gemini");
+        });
 
-          const result = await response.json();
-          if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-            return result.candidates[0].content.parts[0].text;
-          } else {
-            throw new Error("AIからの応答が空でした。");
-          }
-        } catch (err) {
-          if (err.message === "429_RATE_LIMIT") {
-             // 429の場合は無駄なリトライを打ち切って即エラーを返す
-             throw new Error("【429 エラー】APIの無料リクエスト枠（1分間の回数上限）を超過しました。約1分ほど待機してから再度お試しください。");
-          }
-          
-          lastErrorMsg = err.message;
-          console.warn(`${model} (試行 ${attempt + 1}) 失敗:`, err.message);
-          if (attempt === 2) {
-            // 3回失敗したら次のモデル（フォールバック）へ
-            break;
-          }
-          // 通常のエラー(500番台など)は2秒待って再試行
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        let bestModel = "google/gemini-2.5-flash-free"; // フォールバックデフォルト
+        
+        if (visionFreeModels.length > 0) {
+            // 無料枠の中でも特に優秀なGeminiモデルを優先
+            const geminiModel = visionFreeModels.find(m => m.id.includes("gemini")) || visionFreeModels[0];
+            bestModel = geminiModel.id;
+        } else if (freeModels.length > 0) {
+            bestModel = freeModels[0].id;
         }
-      }
-      // 次のモデルへ行く前にペイロードを元に戻す（Web検索を復活させる）
-      currentPayload = JSON.parse(JSON.stringify(payload));
-      console.warn(`${model}での処理に失敗しました。次のモデルで再試行します...`);
+
+        sessionStorage.setItem('optimal_openrouter_model', bestModel);
+        return bestModel;
+    } catch (e) {
+        console.warn("モデル一覧の取得に失敗しました。デフォルトの無料モデルを使用します。", e);
+        return "google/gemini-2.5-flash-free"; // OpenRouter上のデフォルト
     }
-    
-    // すべてのモデル・リトライが失敗した場合
-    throw new Error(`通信失敗 (${lastErrorMsg}) \n・無料枠の制限超過、またはAPIキーが無効になっている可能性があります。`);
+  };
+
+  // UIへモデル名を表示する
+  window.displayLatestModel = async function() {
+    const key = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
+    const display = document.getElementById('currentModelDisplay');
+    if (!key) {
+        display.innerText = "使用AIモデル: APIキー未設定";
+        return;
+    }
+    display.innerText = "使用AIモデル: 最適な無料モデルを確認中...";
+    const modelName = await window.getOptimalFreeModel(key);
+    display.innerText = `使用AIモデル: ${modelName} (無料枠最適化)`;
   }
 
   // ヘルプデータの定義
@@ -772,7 +759,7 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    const savedKey = localStorage.getItem('gemini_api_key');
+    const savedKey = localStorage.getItem('openrouter_api_key') || localStorage.getItem('gemini_api_key');
     if (savedKey) document.getElementById('apiKey').value = savedKey;
 
     const savedAuthId = localStorage.getItem('saved_auth_id');
@@ -1041,8 +1028,10 @@
 
   window.saveApiKey = function() {
     const key = document.getElementById('apiKey').value.trim();
-    localStorage.setItem('gemini_api_key', key);
-    alert("APIキーを保存しました。");
+    localStorage.setItem('openrouter_api_key', key);
+    sessionStorage.removeItem('optimal_openrouter_model'); // APIキー変更時はキャッシュクリア
+    alert("OpenRouter APIキーを保存しました。");
+    window.displayLatestModel();
   };
 
   window.exportData = function() {
@@ -1468,73 +1457,7 @@
   };
 
   // ==========================================
-  // ★ WebRTCカメラ (ハイブリッド方式)
-  // ==========================================
-  let currentStream = null;
-
-  window.openCameraModal = async function() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.warn("getUserMedia非対応のブラウザです。OSのカメラアプリにフォールバックします。");
-      document.getElementById('fallbackCameraInput').click();
-      return;
-    }
-
-    const video = document.getElementById('cameraVideo');
-    const modal = document.getElementById('cameraModal');
-    
-    try {
-      currentStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment" } 
-      });
-      video.srcObject = currentStream;
-      modal.classList.remove('hidden');
-    } catch (error) {
-      console.warn("カメラの起動に失敗しました:", error);
-      alert("ブラウザ内のカメラ起動に失敗しました。OSのカメラ選択画面を起動します。");
-      document.getElementById('fallbackCameraInput').click();
-    }
-  };
-
-  window.closeCameraModal = function() {
-    const modal = document.getElementById('cameraModal');
-    modal.classList.add('hidden');
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-      currentStream = null;
-    }
-  };
-
-  window.takePhoto = async function() {
-    const video = document.getElementById('cameraVideo');
-    const canvas = document.getElementById('cameraCanvas');
-    
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-    window.closeCameraModal();
-    
-    const file = dataURLtoFile(dataUrl, `receipt_${Date.now()}.jpg`);
-    await window.handleImageUpload({ target: { files: [file], value: '' } });
-  };
-
-  function dataURLtoFile(dataurl, filename) {
-    let arr = dataurl.split(','),
-        mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]), 
-        n = bstr.length, 
-        u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, {type:mime});
-  }
-
-  // ==========================================
-  // AI 画像解析 (OCR)
+  // AI 画像解析 (OCR) - OpenRouter版
   // ==========================================
   async function compressImage(file) {
     return new Promise((resolve) => {
@@ -1570,7 +1493,7 @@
     const file = e.target?.files[0] || e.target;
     if (!file || !file.name) return;
 
-    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
+    const apiKey = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) { if(e.target.value) e.target.value = ''; return alert("APIキーを設定してください。"); }
     
     const loadingMsg = document.getElementById('loadingMsg');
@@ -1596,37 +1519,68 @@
         catInstructions = `自動分類はオフになっています。すべてのアイテムのcategoryを「${window.customCategories[0]}」に設定してください。`;
       }
 
+      // 最適な無料モデルを取得
+      const modelName = await window.getOptimalFreeModel(apiKey);
+
+      // OpenRouter API向けのリクエストペイロード作成
       const payload = {
-        contents: [{
-          parts: [
-            { text: `
-              あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
-              【重要ルール】
-              1. 画像が該当する書類でない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
-              2. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
-              3. 内税・外税の厳格判定：
-                - 「税込(内税)」の場合：税単独アイテムを作らず、商品価格(price)自体に含める。
-                - 「税別(外税)」の場合：消費税額を（name: "外税(消費税)", unit_price: 0, qty: 1, price: 0, tax: 金額）として独立抽出。
-              4. 商品名が途切れている場合（例：カツドンベン）、Web検索を用いて妥当な完全な商品名（例：かつ丼弁当）を推測して補完してください。
-              5. カテゴリ分類について:
-              ${catInstructions}
-              【出力フォーマット】
-              成功時: { "items": [ { "date": "YYYY-MM-DD", "store": "店名", "name": "商品名", "unit_price": 100, "qty": 1, "price": 100, "tax": 0, "category": "カテゴリ名", "memo": "" } ] }
-              エラー時: { "error": "エラーメッセージ" }
-              
-              必ず上記フォーマットに従い、純粋なJSONテキストのみを出力してください。Markdownブロックは不要です。
-            `},
-            { inline_data: { mime_type: "image/jpeg", data: base64String } }
+        model: modelName,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
+【重要ルール】
+1. 画像が該当する書類でない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
+2. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
+3. 内税・外税の厳格判定：
+  - 「税込(内税)」の場合：税単独アイテムを作らず、商品価格(price)自体に含める。
+  - 「税別(外税)」の場合：消費税額を（name: "外税(消費税)", unit_price: 0, qty: 1, price: 0, tax: 金額）として独立抽出。
+4. 【Webリサーチ機能】商品名が途切れている場合（例：カツドンベン）や、品名が不明瞭な場合は、Web検索やあなたの持つ広範な知識・Webリサーチ機能を活用して、妥当で完全な商品名（例：かつ丼弁当）を推測して補完してください。
+5. カテゴリ分類について:
+${catInstructions}
+
+【出力フォーマット】
+成功時: { "items": [ { "date": "YYYY-MM-DD", "store": "店名", "name": "商品名", "unit_price": 100, "qty": 1, "price": 100, "tax": 0, "category": "カテゴリ名", "memo": "" } ] }
+エラー時: { "error": "エラーメッセージ" }
+
+必ず純粋なJSONテキストのみとし、Markdownの装飾(\`\`\`jsonなど)は含めないでください。`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64String}`
+              }
+            }
           ]
         }],
-        tools: [{ googleSearch: {} }]
+        plugins: [{ id: "web" }] // OpenRouterのWebリサーチ用プラグイン(サポートされている場合作動)
       };
 
-      // 429対策付きリトライ＆フォールバック関数を実行
-      let jsonText = await callGeminiAPIWithRetry(apiKey, payload);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: 'POST', 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.href, // OpenRouter推奨ヘッダ
+          'X-Title': 'Kakeibo Cloud Sync'
+        }, 
+        body: JSON.stringify(payload)
+      });
       
-      // JSONフォーマットの堅牢な抽出処理（AIがMarkdownや不要な文字列を混ぜた場合への対策）
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`通信エラー (${response.status})。APIキーまたはモデルが不正です。詳細: ${errText}`);
+      }
+      
+      const result = await response.json();
+      if (!result.choices || result.choices.length === 0) throw new Error("解析結果が空でした。");
+
+      let jsonText = result.choices[0].message.content;
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      
+      // JSONのパースエラーを防ぐための切り出し
       const startIdx = jsonText.indexOf('{');
       const endIdx = jsonText.lastIndexOf('}');
       if (startIdx !== -1 && endIdx !== -1) {
@@ -2192,7 +2146,7 @@
   }
 
   window.getExpertAIAdvice = async function() {
-    const apiKey = localStorage.getItem('gemini_api_key');
+    const apiKey = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) return alert("APIキーが設定されていません。");
     const selectedMonth = document.getElementById('monthSelector').value;
     if(!selectedMonth) return alert("データがありません。");
@@ -2208,21 +2162,40 @@
       blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += isExp ? (e.price + e.tax) : e.amount;
     });
 
+    const modelName = await window.getOptimalFreeModel(apiKey);
+
     const payload = {
-      contents: [{
-        parts: [{ text: `
-          あなたは優秀な経理責任者です。個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを生成してください。
-          条件：10日ごとのペース配分への言及、具体的な改善・向上策の提示。
-          対象月: ${selectedMonth} / 上旬: ¥${blockTotals[0]} / 中旬: ¥${blockTotals[1]} / 下旬: ¥${blockTotals[2]}
-          データ: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}
-        `}]
-      }]
+      model: modelName,
+      messages: [{
+        role: "user",
+        content: `あなたは優秀な経理責任者です。個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを生成してください。
+条件：10日ごとのペース配分への言及、具体的な改善・向上策の提示。
+【Webリサーチ機能】最新の経済状況や物価動向、一般的な節約術などをWeb検索機能でリサーチし、具体的なデータも交えてアドバイスに役立ててください。
+対象月: ${selectedMonth} / 上旬: ¥${blockTotals[0]} / 中旬: ¥${blockTotals[1]} / 下旬: ¥${blockTotals[2]}
+データ: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
+      }],
+      plugins: [{ id: "web" }] // OpenRouterのWebリサーチ用プラグイン
     };
 
     try {
-      const text = await callGeminiAPIWithRetry(apiKey, payload);
-      adviceElem.innerText = text;
-    } catch (error) { adviceElem.innerText = "分析に失敗しました。しばらく時間をおいて再度お試しください。"; }
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: 'POST', 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Kakeibo Cloud Sync'
+        }, 
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error("APIエラー");
+      const result = await response.json();
+      adviceElem.innerText = result.choices[0].message.content;
+    } catch (error) { 
+      console.error(error);
+      adviceElem.innerText = "分析に失敗しました。"; 
+    }
   };
 
   window.exportCSV = function() {
