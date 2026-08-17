@@ -207,17 +207,24 @@
           <input type="text" id="apiKey" placeholder="APIキーを入力" style="margin-bottom: 0;">
           <button onclick="saveApiKey()">保存</button>
         </div>
+        <p style="font-size: 11px; color: #666; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash (Fallback: 3.6-flash)</p>
       </div>
 
       <div class="card">
         <h2>書類・レシートを読み取る <span class="help-icon" onclick="showHelp('record')">❓</span></h2>
+        
         <button onclick="openCameraModal()" class="file-upload-btn" style="width: 100%; border: none; font-size: 14px;">
           <span class="minimal-emoji">📷</span> カメラを起動して撮影
         </button>
+        
         <label class="file-upload-btn outline">
           <span class="minimal-emoji">🖼️</span> ギャラリーから画像を選択
-          <input type="file" id="galleryInput" accept="image/*">
+          <input type="file" id="galleryInput" accept="image/*" onchange="window.handleImageUpload(event)">
         </label>
+        
+        <!-- OS標準カメラ呼び出し用の隠しInput (エラー時のフォールバック) -->
+        <input type="file" id="fallbackCameraInput" accept="image/*" capture="environment" class="hidden" onchange="window.handleImageUpload(event)">
+        
         <p style="font-size: 11px; color: #666; text-align: center; margin-top: 8px;">※レシート以外にも、請求書やスクショ等からの文字情報も解析できます</p>
         <p id="loadingMsg" class="hidden" style="color: var(--primary); font-size: 14px; font-weight: bold; text-align: center; margin-top: 16px;">AIが解析中...</p>
       </div>
@@ -343,7 +350,6 @@
 
     <!-- 6. 設定タブ -->
     <div id="settings" class="tab-content">
-      <!-- 新設: カテゴリ設定 -->
       <div class="card">
         <h2>分類(カテゴリ)の設定</h2>
         <p style="font-size: 12px; color: #666; margin-bottom: 16px;">出費を分類するカテゴリを自由に追加・削除できます。</p>
@@ -499,8 +505,9 @@
       </div>
       <div class="update-notice">
         <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-          <li><b>OCR機能の強化:</b> レシートだけでなく、請求書やスクショ等からの読み取り精度が向上しました。途切れた商品名もWeb検索で推測します。</li>
-          <li><b>カテゴリのカスタマイズ:</b> 設定タブから、お好みの分類（カテゴリ）を追加・削除できるようになりました。AI自動分類のON/OFFも可能です。</li>
+          <li><b>安定性の向上:</b> 429エラー（リクエスト制限）に対する自動リトライ機能と、3.7/3.6モデル自動フォールバックを搭載しました。</li>
+          <li><b>カメラ起動の改善:</b> 一部のAndroidブラウザでカメラが起動しない問題に対応しました。</li>
+          <li><b>カテゴリのカスタマイズ:</b> 設定タブから、お好みの分類を追加・削除できるようになりました。</li>
         </ul>
       </div>
       <button onclick="closeUpdateModal()" style="width: 100%;">確認しました</button>
@@ -536,7 +543,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.15.v4"; // バージョン管理用
+  const APP_VERSION = "2026.08.16.v8"; // バージョン管理用
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -550,13 +557,11 @@
   window.customCategories = ["食費(純)", "食費(雑)", "経費", "雑費", "税"];
   window.isAutoCategory = true;
 
-  // グラフインスタンス (ユーザー用)
+  // グラフインスタンス
   window.doughnutChartInstance = null;
   window.tenDaysChartInstance = null;
   window.trendChartInstance = null;
   window.evalTrendChartInstance = null;
-
-  // グラフインスタンス (管理者用)
   window.adminDoughnutChart = null;
   window.adminTenDaysChart = null;
   window.adminTrendChart = null;
@@ -568,6 +573,55 @@
   const barColors = ['#D1E8E2', '#C5D0E6', '#F9C5BD'];
   const incomeChartColors = ['#C8E6C9', '#A5D6A7', '#81C784', '#66BB6A', '#4CAF50'];
   const incomeBarColors = ['#E8F5E9', '#C8E6C9', '#A5D6A7'];
+
+  // ==========================================
+  // ★ 429対策付き Gemini API 実行関数 (リトライ＆フォールバック内蔵)
+  // ==========================================
+  async function callGeminiAPIWithRetry(apiKey, payload) {
+    const models = ["gemini-3.7-flash", "gemini-3.6-flash"];
+    
+    for (const model of models) {
+      // 429や一時的なエラーに対するリトライ（最大3回）
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.status === 429) {
+            // 429 Too Many Requests の場合は数秒待ってからリトライ (指数バックオフ)
+            const waitTime = (attempt + 1) * 3000; // 3秒, 6秒, 9秒
+            console.warn(`[429] 混雑制限中のため ${waitTime / 1000}秒後に再試行します (${attempt + 1}/3)...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTPエラー (${response.status})`);
+          }
+
+          const result = await response.json();
+          if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+            return result.candidates[0].content.parts[0].text;
+          } else {
+            throw new Error("AIからの応答が空でした。");
+          }
+        } catch (err) {
+          console.warn(`${model} (試行 ${attempt + 1}) 失敗:`, err.message);
+          if (attempt === 2) {
+            // 3回失敗したら次のモデル（フォールバック）へ
+            break;
+          }
+          // 短いウェイトを入れてリトライ
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+      console.warn(`${model}での処理に失敗しました。次のモデルで再試行します...`);
+    }
+    throw new Error("すべてのGeminiモデル（3.7 / 3.6）での通信に失敗しました。時間をおいて再度お試しください。");
+  }
 
   // ヘルプデータの定義
   const helpData = {
@@ -654,7 +708,7 @@
         await setDoc(getDocRef('expenses', expense.id), expense);
       } catch(e) {
         console.error("保存失敗:", e);
-        alert("データの保存に失敗しました。Firebaseのセキュリティルール(Rules)が「allow read, write: if true;」になっているか確認してください。");
+        alert("データの保存に失敗しました。Firebaseのルールを確認してください。");
       }
     } else {
       const idx = window.expenses.findIndex(e => e.id === expense.id);
@@ -724,16 +778,11 @@
       
       // カスタムカテゴリの読み込み
       const savedCats = localStorage.getItem(`categories_${window.currentUser}`);
-      if (savedCats) {
-        window.customCategories = JSON.parse(savedCats);
-      } else {
-        window.customCategories = ["食費(純)", "食費(雑)", "経費", "雑費", "税"];
-      }
+      if (savedCats) window.customCategories = JSON.parse(savedCats);
+      else window.customCategories = ["食費(純)", "食費(雑)", "経費", "雑費", "税"];
       
       const savedAuto = localStorage.getItem(`autoCategory_${window.currentUser}`);
-      if (savedAuto !== null) {
-        window.isAutoCategory = savedAuto === 'true';
-      }
+      if (savedAuto !== null) window.isAutoCategory = savedAuto === 'true';
 
       window.updateCategoryUI();
       window.checkAdmin();
@@ -763,9 +812,8 @@
     }
   };
 
-  // --- アップデート通知 ---
   window.showUpdateModalIfNeeded = function() {
-    if (window.currentUser === ADMIN_ID) return; // 管理者は非表示
+    if (window.currentUser === ADMIN_ID) return; 
     const seenVersion = localStorage.getItem('seen_update_version');
     if (seenVersion !== APP_VERSION) {
       document.getElementById('updateModal').classList.remove('hidden');
@@ -776,16 +824,13 @@
     document.getElementById('updateModal').classList.add('hidden');
   };
 
-  // --- カテゴリ管理UI ---
   window.updateCategoryUI = function() {
     const selects = [document.getElementById('inputCategory'), document.getElementById('editCategory')];
     selects.forEach(select => {
       if(!select) return;
       const currentVal = select.value;
       select.innerHTML = window.customCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-      if (window.customCategories.includes(currentVal)) {
-        select.value = currentVal;
-      }
+      if (window.customCategories.includes(currentVal)) select.value = currentVal;
     });
 
     const list = document.getElementById('categoryList');
@@ -855,7 +900,7 @@
         await setDoc(userRef, { pin: pin });
       } catch (e) {
         console.error("登録エラー:", e);
-        return alert("通信エラーが発生しました。Firebaseの「ルール (Rules)」が設定されているか確認してください。");
+        return alert("通信エラーが発生しました。");
       }
     } else {
       if (allUsers[id]) return alert("そのIDは既に登録されています。");
@@ -882,7 +927,7 @@
         }
       } catch (e) {
         console.error("ログインエラー:", e);
-        return alert("通信エラーが発生しました。Firebaseの「ルール」設定を確認してください。");
+        return alert("通信エラーが発生しました。");
       }
     } else {
       if (!allUsers[id] || allUsers[id].pin !== pin) return alert("IDまたはPINコードが一致しません。");
@@ -1046,7 +1091,6 @@
     return text[0] + "***" + text[text.length - 1];
   }
 
-  // ★ ユーザーIDはマスクせずに表示する
   window.loadAdminUsers = function() {
     const select = document.getElementById('adminUserSelect');
     select.innerHTML = '<option value="">ユーザーを選択...</option>';
@@ -1058,7 +1102,6 @@
     document.getElementById('adminDataArea').innerHTML = '<p style="text-align: center; color: #666; font-size: 14px; margin-top: 30px;">ユーザーを選択してください。</p>';
   };
 
-  // ★ 削除時に一覧からも確実に消し、UIを更新する
   window.deleteUserByAdmin = async function() {
     const uid = document.getElementById('adminUserSelect').value;
     if (!uid) return;
@@ -1087,14 +1130,11 @@
       localStorage.removeItem(`autoCategory_${uid}`);
     }
     
-    // UI上の配列からも即座に削除 (FirestoreのonSnapshotが走るまでのラグ対策)
     allExpenses = allExpenses.filter(e => e.appUserId !== uid);
     allIncomes = allIncomes.filter(i => i.appUserId !== uid);
     delete allUsers[uid];
     
     alert("ユーザーを削除しました。");
-    
-    // セレクトボックス再描画 & 選択クリア
     window.loadAdminUsers();
   };
 
@@ -1162,11 +1202,7 @@
     html += '</div>';
 
     area.innerHTML = html;
-    
-    // グラフ描画用関数を遅延実行
-    setTimeout(() => {
-      window.renderAdminCharts(expData);
-    }, 100);
+    setTimeout(() => { window.renderAdminCharts(expData); }, 100);
   };
 
   window.renderAdminCharts = function(expData) {
@@ -1288,7 +1324,6 @@
     window.renderCharts();
   };
 
-  // 収入源の予測変換を更新する
   window.updateIncomeDatalist = function() {
     const datalist = document.getElementById('incomeSourceOptions');
     if (!datalist) return;
@@ -1413,13 +1448,14 @@
   };
 
   // ==========================================
-  // ★ WebRTCカメラ
+  // ★ WebRTCカメラ (ハイブリッド方式)
   // ==========================================
   let currentStream = null;
 
   window.openCameraModal = async function() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("このブラウザではカメラAPIがサポートされていません。HTTPS接続の環境で開いているか確認してください。");
+      console.warn("getUserMedia非対応のブラウザです。OSのカメラアプリにフォールバックします。");
+      document.getElementById('fallbackCameraInput').click();
       return;
     }
 
@@ -1427,17 +1463,15 @@
     const modal = document.getElementById('cameraModal');
     
     try {
-      try {
-        currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
-      } catch(err) {
-        currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      }
-      
+      currentStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" } 
+      });
       video.srcObject = currentStream;
       modal.classList.remove('hidden');
     } catch (error) {
-      console.error("カメラの起動に失敗しました:", error);
-      alert("カメラへのアクセスが拒否されました。ブラウザの権限設定を確認してください。");
+      console.warn("カメラの起動に失敗しました:", error);
+      alert("ブラウザ内のカメラ起動に失敗しました。OSのカメラ選択画面を起動します。");
+      document.getElementById('fallbackCameraInput').click();
     }
   };
 
@@ -1512,8 +1546,6 @@
     });
   }
 
-  document.getElementById('galleryInput').addEventListener('change', async (e) => await window.handleImageUpload(e));
-
   window.handleImageUpload = async function(e) {
     const file = e.target?.files[0] || e.target;
     if (!file || !file.name) return;
@@ -1565,17 +1597,12 @@
             { inline_data: { mime_type: "image/jpeg", data: base64String } }
           ]
         }],
-        tools: [{ "google_search": {} }],
+        tools: [{ googleSearch: {} }],
         generationConfig: { responseMimeType: "application/json" }
       };
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      });
-      
-      if (!response.ok) throw new Error(`通信エラー (${response.status})。APIキーまたはモデル名が不正です。`);
-      const result = await response.json();
-      let jsonText = result.candidates[0].content?.parts[0]?.text;
+      // 429対策付きリトライ＆フォールバック関数を実行
+      let jsonText = await callGeminiAPIWithRetry(apiKey, payload);
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
       
       const parsedData = JSON.parse(jsonText);
@@ -1589,7 +1616,7 @@
         for (const item of parsedData.items) {
           const isTax = item.name === "外税(消費税)";
           let itemCategory = item.category;
-          // カスタムカテゴリに含まれていない場合は先頭のカテゴリにする
+          
           if (!window.customCategories.includes(itemCategory)) {
             itemCategory = window.customCategories[0];
           }
@@ -1685,7 +1712,6 @@
     }
     if (document.getElementById('admin').classList.contains('active')) window.loadAdminUsers();
     
-    // 収入源の予測変換リストを更新
     window.updateIncomeDatalist();
   };
 
@@ -1808,7 +1834,6 @@
     document.getElementById('editQty').value = e.qty;
     document.getElementById('editTax').value = e.tax;
     
-    // カテゴリ選択を復元
     const categorySelect = document.getElementById('editCategory');
     if (!window.customCategories.includes(e.category)) {
         categorySelect.innerHTML += `<option value="${e.category}">${e.category} (旧)</option>`;
@@ -1942,7 +1967,7 @@
       monthData.forEach(e => {
         const cost = e.price + e.tax;
         if(totals[e.category] !== undefined) totals[e.category] += cost;
-        else totals[e.category] = cost; // カテゴリ追加
+        else totals[e.category] = cost;
         monthTotal += cost;
         
         if (e.isNecessary === true && e.name !== "外税(消費税)") {
@@ -2167,12 +2192,9 @@
     };
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      });
-      const result = await response.json();
-      adviceElem.innerText = result.candidates[0].content.parts[0].text;
-    } catch (error) { adviceElem.innerText = "分析に失敗しました。"; }
+      const text = await callGeminiAPIWithRetry(apiKey, payload);
+      adviceElem.innerText = text;
+    } catch (error) { adviceElem.innerText = "分析に失敗しました。しばらく時間をおいて再度お試しください。"; }
   };
 
   window.exportCSV = function() {
@@ -2189,5 +2211,3 @@
 </script>
 </body>
 </html>
-
-
