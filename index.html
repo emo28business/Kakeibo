@@ -1554,7 +1554,7 @@ ${catInstructions}
 成功時: { "items": [ { "date": "YYYY-MM-DD", "store": "店名", "name": "商品名", "unit_price": 100, "qty": 1, "price": 100, "tax": 0, "category": "カテゴリ名", "memo": "" } ] }
 エラー時: { "error": "エラーメッセージ" }
 
-必ず純粋なJSONテキストのみとし、Markdownの装飾(\`\`\`jsonなど)は含めないでください。`
+絶対に思考プロセス、挨拶、説明を出力しないでください。出力は必ず波括弧 { で始まり、波括弧 } で終わる純粋なJSONテキストのみとしてください。`
             },
             {
               type: "image_url",
@@ -1603,17 +1603,27 @@ ${catInstructions}
       const result = await response.json();
       if (!result.choices || result.choices.length === 0) throw new Error("解析結果が空でした。");
 
-      let jsonText = result.choices[0].message.content;
+      let jsonText = result.choices[0].message.content || "";
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
       
       // JSONのパースエラーを防ぐための切り出し
       const startIdx = jsonText.indexOf('{');
       const endIdx = jsonText.lastIndexOf('}');
+      
       if (startIdx !== -1 && endIdx !== -1) {
           jsonText = jsonText.substring(startIdx, endIdx + 1);
+      } else {
+          console.error("AI Raw Response:", result.choices[0].message.content);
+          throw new Error("AIがJSON形式で応答しませんでした。時間をおいて再試行するか、別の画像をお試しください。");
       }
       
-      const parsedData = JSON.parse(jsonText);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(jsonText);
+      } catch (parseErr) {
+        console.error("JSON Parse Error:", parseErr, "TargetText:", jsonText);
+        throw new Error("AIの解析データに異常がありました。もう一度試すか、画像が鮮明か確認してください。");
+      }
       
       if (parsedData.error) {
         throw new Error(parsedData.error);
