@@ -579,6 +579,7 @@
   // ==========================================
   async function callGeminiAPIWithRetry(apiKey, payload) {
     const models = ["gemini-3.7-flash", "gemini-3.6-flash"];
+    let lastErrorMsg = "";
     
     for (const model of models) {
       // 429や一時的なエラーに対するリトライ（最大3回）
@@ -593,13 +594,15 @@
           if (response.status === 429) {
             // 429 Too Many Requests の場合は数秒待ってからリトライ (指数バックオフ)
             const waitTime = (attempt + 1) * 3000; // 3秒, 6秒, 9秒
+            lastErrorMsg = "429: リクエスト制限（数十秒待って再度お試しください）";
             console.warn(`[429] 混雑制限中のため ${waitTime / 1000}秒後に再試行します (${attempt + 1}/3)...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
             continue;
           }
 
           if (!response.ok) {
-            throw new Error(`HTTPエラー (${response.status})`);
+            const errorDetails = await response.text().catch(() => "");
+            throw new Error(`HTTP ${response.status} - ${errorDetails}`);
           }
 
           const result = await response.json();
@@ -609,6 +612,7 @@
             throw new Error("AIからの応答が空でした。");
           }
         } catch (err) {
+          lastErrorMsg = err.message;
           console.warn(`${model} (試行 ${attempt + 1}) 失敗:`, err.message);
           if (attempt === 2) {
             // 3回失敗したら次のモデル（フォールバック）へ
@@ -620,7 +624,8 @@
       }
       console.warn(`${model}での処理に失敗しました。次のモデルで再試行します...`);
     }
-    throw new Error("すべてのGeminiモデル（3.7 / 3.6）での通信に失敗しました。時間をおいて再度お試しください。");
+    // すべてのモデル・リトライが失敗した場合は、最後に発生した具体的なエラー内容を返す
+    throw new Error(`通信失敗 (${lastErrorMsg}) \n・無料枠の制限超過、またはAPIキーが無効になっている可能性があります。`);
   }
 
   // ヘルプデータの定義
@@ -1593,17 +1598,25 @@
               【出力フォーマット】
               成功時: { "items": [ { "date": "YYYY-MM-DD", "store": "店名", "name": "商品名", "unit_price": 100, "qty": 1, "price": 100, "tax": 0, "category": "カテゴリ名", "memo": "" } ] }
               エラー時: { "error": "エラーメッセージ" }
+              
+              必ず上記フォーマットに従い、純粋なJSONテキストのみを出力してください。Markdownブロックは不要です。
             `},
             { inline_data: { mime_type: "image/jpeg", data: base64String } }
           ]
         }],
-        tools: [{ googleSearch: {} }],
-        generationConfig: { responseMimeType: "application/json" }
+        tools: [{ googleSearch: {} }]
       };
 
       // 429対策付きリトライ＆フォールバック関数を実行
       let jsonText = await callGeminiAPIWithRetry(apiKey, payload);
+      
+      // JSONフォーマットの堅牢な抽出処理（AIがMarkdownや不要な文字列を混ぜた場合への対策）
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const startIdx = jsonText.indexOf('{');
+      const endIdx = jsonText.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx !== -1) {
+          jsonText = jsonText.substring(startIdx, endIdx + 1);
+      }
       
       const parsedData = JSON.parse(jsonText);
       
