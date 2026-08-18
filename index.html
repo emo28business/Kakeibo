@@ -678,6 +678,17 @@
     </div>
   </div>
 
+  <!-- ブック操作メニューモーダル -->
+  <div id="bookEditMenuModal" class="modal-overlay hidden" style="z-index: 3000;">
+    <div class="modal-content" style="max-width: 300px; padding: 20px;">
+      <h2 id="bookEditMenuTitle" style="margin-bottom: 20px; font-size: 16px; text-align: center; color: var(--text-color);"></h2>
+      <input type="hidden" id="bookEditMenuId">
+      <button onclick="executeBookMenuRename()" style="margin-bottom: 12px; width: 100%;">名前を変更する</button>
+      <button onclick="executeBookMenuDelete()" class="outline" style="margin-bottom: 20px; width: 100%; border-color: var(--red-text); color: var(--red-text);">このブックを削除</button>
+      <button onclick="closeBookEditMenuModal()" class="outline" style="width: 100%; border-color: #999; color: #666;">キャンセル</button>
+    </div>
+  </div>
+
   <!-- お知らせ用通知モーダル -->
   <div id="notificationModal" class="modal-overlay hidden" style="z-index: 4000;">
     <div class="modal-content" style="max-width: 350px;">
@@ -1213,7 +1224,7 @@
     bookPressTimer = window.setTimeout(() => {
       bookPressTimer = null;
       window.openBookEditMenu(id);
-    }, 600);
+    }, 300);
   };
   window.cancelBookLongPress = function() {
     if (bookPressTimer !== null) {
@@ -1227,13 +1238,31 @@
     const book = window.books.find(b => b.id === id);
     if(!book) return;
     
-    const action = prompt(`「${book.name}」の操作を選んでください。\n1: 名前変更\n2: 削除\n\n半角数字で 1 か 2 を入力してください。`);
-    if (action === '1') {
+    document.getElementById('bookEditMenuId').value = id;
+    document.getElementById('bookEditMenuTitle').innerText = `「${book.name}」の操作`;
+    document.getElementById('bookEditMenuModal').classList.remove('hidden');
+  };
+
+  window.closeBookEditMenuModal = function() {
+    document.getElementById('bookEditMenuModal').classList.add('hidden');
+  };
+
+  window.executeBookMenuRename = function() {
+    const id = document.getElementById('bookEditMenuId').value;
+    const book = window.books.find(b => b.id === id);
+    if(book) {
       const newName = prompt("新しいブック名を入力してください", book.name);
-      if(newName && newName.trim()) window.renameBook(id, newName);
-    } else if (action === '2') {
-      window.deleteBook(id);
+      if(newName && newName.trim()) {
+        window.renameBook(id, newName);
+      }
     }
+    window.closeBookEditMenuModal();
+  };
+
+  window.executeBookMenuDelete = function() {
+    const id = document.getElementById('bookEditMenuId').value;
+    window.deleteBook(id);
+    window.closeBookEditMenuModal();
   };
 
   let draggedBookIndex = null;
