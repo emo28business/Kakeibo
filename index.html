@@ -18,15 +18,15 @@
       --primary-hover: #333333;
       --card-bg: #ffffff;
       
-      /* 彩度を抑えたアクセントカラー (くすみグリーン) */
-      --pale-green: #ebf0eb;
-      --pale-green-border: #c3d0c3;
-      --green-text: #4a5c4a;
+      /* さらに明るくしたアクセントカラー (グリーン) */
+      --pale-green: #e6f2e6;
+      --pale-green-border: #b8d9b8;
+      --green-text: #4da64d;
       
-      /* 彩度を抑えたアクセントカラー (くすみレッド) */
-      --pale-red: #f0ebeb;
-      --pale-red-border: #d0c3c3;
-      --red-text: #6b4c4c;
+      /* さらに明るくしたアクセントカラー (レッド) */
+      --pale-red: #f2e6e6;
+      --pale-red-border: #d9b8b8;
+      --red-text: #c25959;
     }
     
     /* マテリアルシンボルの基本設定 */
@@ -90,16 +90,13 @@
       box-shadow: 0 -2px 5px rgba(0,0,0,0.02);
     }
     .book-tab-add {
-      padding: 10px 15px;
-      cursor: pointer;
+      padding: 10px 10px;
       color: #888;
       display: flex;
       align-items: center;
-      transition: all 0.2s;
     }
-    .book-tab-add:hover {
-      color: var(--text-color);
-    }
+    .book-tab-add > span { cursor: pointer; transition: all 0.2s; }
+    .book-tab-add > span:hover { color: var(--text-color); }
 
     button {
       background: var(--primary); color: #fff; border: none;
@@ -289,7 +286,7 @@
         <label>日付</label>
         <div style="display: flex; gap: 8px; margin-bottom: 16px;">
           <input type="date" id="inputDate" style="margin-bottom: 0; flex: 1;">
-          <button onclick="document.getElementById('inputDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+          <button onclick="document.getElementById('inputDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
         </div>
         <label>店名</label><input type="text" id="inputStore" placeholder="例: セブンイレブン">
         <label>商品名</label><input type="text" id="inputName" placeholder="例: コーヒー">
@@ -316,7 +313,7 @@
         <label>日付</label>
         <div style="display: flex; gap: 8px; margin-bottom: 16px;">
           <input type="date" id="incomeDate" style="margin-bottom: 0; flex: 1;">
-          <button onclick="document.getElementById('incomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+          <button onclick="document.getElementById('incomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
         </div>
         <label>収入源</label>
         <input type="text" id="incomeSource" list="incomeSourceOptions" placeholder="例: 給与、副業、メルカリ">
@@ -551,7 +548,7 @@
       <label>日付</label>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="date" id="editDate" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('editDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+        <button onclick="document.getElementById('editDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
       </div>
       <label>店名</label><input type="text" id="editStore">
       <label>商品名</label><input type="text" id="editName">
@@ -580,7 +577,7 @@
       <label>日付</label>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="date" id="editIncomeDate" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('editIncomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+        <button onclick="document.getElementById('editIncomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
       </div>
       <label>収入源</label><input type="text" id="editIncomeSource">
       <label>金額</label><input type="number" id="editIncomeAmount">
@@ -662,7 +659,7 @@
         <label>日付 (一括変更)</label>
         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
           <input type="date" id="ocrBatchDate" style="margin-bottom: 0; flex: 1;">
-          <button onclick="document.getElementById('ocrBatchDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+          <button onclick="document.getElementById('ocrBatchDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
         </div>
         <label>店名 (一括変更)</label>
         <input type="text" id="ocrBatchStore" style="margin-bottom: 0;">
@@ -690,7 +687,7 @@
       <label>変更後の日付 (空欄ならそのまま)</label>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="date" id="bulkEditDate" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('bulkEditDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+        <button onclick="document.getElementById('bulkEditDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
       </div>
       <label>変更後の店名 (空欄ならそのまま)</label>
       <input type="text" id="bulkEditStore">
@@ -758,11 +755,11 @@
   
   window.currentAnalysisMode = 'expense';
 
-  // 彩度を少し上げたスモーキーなパステルカラー
-  const chartColors = ['#8cb0a0', '#b099c2', '#c2b388', '#889ec7', '#c78d8d', '#8dc7c7', '#c7ab7b', '#ba93c9'];
-  const barColors = ['#c2b388', '#8cb0a0', '#889ec7'];
-  const incomeChartColors = ['#8cb0a0', '#8e9dba', '#ba8e9c', '#9dba8e', '#8e94ba'];
-  const incomeBarColors = ['#8cb0a0', '#8e9dba', '#ba8e9c'];
+  // さらに明るく鮮やかなパステルカラー
+  const chartColors = ['#9ec2ae', '#bea6d4', '#d4c598', '#99afdb', '#db9a9a', '#9ed9d9', '#dbbc8a', '#ccaddb'];
+  const barColors = ['#d4c598', '#9ec2ae', '#99afdb'];
+  const incomeChartColors = ['#9ec2ae', '#a0b1d1', '#cc9db0', '#b0cc9d', '#a0a6d1'];
+  const incomeBarColors = ['#9ec2ae', '#a0b1d1', '#cc9db0'];
 
   // ==========================================
   // ★ Firebase初期化 (プレビュー環境対応版)
@@ -1042,8 +1039,9 @@
     
     if (window.books.length < 3) {
       html += `
-        <div class="book-tab-add" onclick="promptAddBook()" title="ブックを追加">
-          <span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+        <div class="book-tab-add" title="ブックを追加">
+          <span class="material-symbols-outlined" onclick="promptAddBook()" style="font-size: 20px;">add</span>
+          <span class="material-symbols-outlined help-icon" onclick="showHelp('book')" style="width:20px; height:20px; font-size:14px; margin-left:4px; padding:0;" title="ブック管理について">help</span>
         </div>
       `;
     }
@@ -1474,6 +1472,20 @@
     reader.readAsText(file);
   };
 
+  // --- 分析モードの切り替え ---
+  window.setAnalysisMode = function(mode) {
+    window.currentAnalysisMode = mode;
+    if (mode === 'expense') {
+      document.getElementById('btnAnalysisExpense').classList.remove('outline');
+      document.getElementById('btnAnalysisIncome').classList.add('outline');
+    } else {
+      document.getElementById('btnAnalysisExpense').classList.add('outline');
+      document.getElementById('btnAnalysisIncome').classList.remove('outline');
+    }
+    window.updateMonthSelector();
+    window.renderCharts();
+  };
+
   window.switchTab = function(tabId, element) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -1682,8 +1694,8 @@
       data: {
         labels: targetMonths,
         datasets: [
-          { label: '必要(%)', data: yesData, backgroundColor: '#ebf0eb', borderColor: '#a3b5a3', borderWidth: 1 },
-          { label: '無駄(%)', data: noData, backgroundColor: '#f0ebeb', borderColor: '#b5a3a3', borderWidth: 1 }
+          { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderWidth: 0 },
+          { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderWidth: 0 }
         ]
       },
       options: {
@@ -1912,7 +1924,7 @@
         contents: [{
           parts: [
             { text: `
-              あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
+              あなたは優秀な経理アシ আমেরアシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
 【重要ルール】
 1. 画像が該当する書類でない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
 2. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
@@ -2655,8 +2667,8 @@ ${catInstructions}
         data: {
           labels: targetMonths,
           datasets: [
-            { label: '必要(%)', data: yesData, backgroundColor: '#ebf0eb', borderColor: '#a3b5a3', borderWidth: 1 },
-            { label: '無駄(%)', data: noData, backgroundColor: '#f0ebeb', borderColor: '#b5a3a3', borderWidth: 1 }
+            { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderWidth: 0 },
+            { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderWidth: 0 }
           ]
         },
         options: {
