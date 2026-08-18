@@ -519,31 +519,23 @@
   // Firebase SDK (v12.16.0) インポート
   // ==========================================
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+  import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
   // ==========================================
-  // あなたのFirebase設定
+  // Firebase設定
   // ==========================================
-  const firebaseConfig = {
-    apiKey: "AIzaSyBqciioBDpHEE7FWw0Ja7FMnvVIGLW-j1g",
-    authDomain: "kakeibo-8cfd6.firebaseapp.com",
-    projectId: "kakeibo-8cfd6",
-    storageBucket: "kakeibo-8cfd6.firebasestorage.app",
-    messagingSenderId: "283431373338",
-    appId: "1:283431373338:web:397a6a4de976f7bee1dfa3",
-    measurementId: "G-NZKF7PBMK7"
-  };
-
   let app, auth, db;
   let isCloudEnabled = false;
   let firebaseUser = null;
+  let useEnvironmentFirebase = typeof __firebase_config !== 'undefined';
+  let appId = 'kakeibo';
 
   let allUsers = {};
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.17.v8"; // バージョン管理用
+  const APP_VERSION = "2026.08.17.v9"; // バージョン管理用
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -573,6 +565,106 @@
   const barColors = ['#D1E8E2', '#C5D0E6', '#F9C5BD'];
   const incomeChartColors = ['#C8E6C9', '#A5D6A7', '#81C784', '#66BB6A', '#4CAF50'];
   const incomeBarColors = ['#E8F5E9', '#C8E6C9', '#A5D6A7'];
+
+  // ==========================================
+  // ★ Firebase初期化 (プレビュー環境対応版)
+  // ==========================================
+  try {
+    let config;
+    if (useEnvironmentFirebase) {
+      config = JSON.parse(__firebase_config);
+      appId = typeof __app_id !== 'undefined' ? __app_id : 'kakeibo';
+    } else {
+      config = {
+        apiKey: "AIzaSyBqciioBDpHEE7FWw0Ja7FMnvVIGLW-j1g",
+        authDomain: "kakeibo-8cfd6.firebaseapp.com",
+        projectId: "kakeibo-8cfd6",
+        storageBucket: "kakeibo-8cfd6.firebasestorage.app",
+        messagingSenderId: "283431373338",
+        appId: "1:283431373338:web:397a6a4de976f7bee1dfa3",
+        measurementId: "G-NZKF7PBMK7"
+      };
+    }
+    app = initializeApp(config);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    isCloudEnabled = true;
+    
+    const badge = document.getElementById('syncStatusBadge');
+    badge.innerText = 'Cloud Sync On';
+    badge.className = 'cloud-badge';
+  } catch (e) {
+    console.error("Firebase Initialization Error:", e);
+    alert("クラウド設定の初期化に失敗しました。ローカルモードで動作します。");
+  }
+
+  function getCollectionPath(colName) {
+    // プレビュー環境の制約に対応するパス生成
+    if (useEnvironmentFirebase) {
+      return `artifacts/${appId}/public/data/${colName}`;
+    }
+    return colName; // 元のパス
+  }
+
+  function getCollectionRef(colName) { return collection(db, getCollectionPath(colName)); }
+  function getDocRef(colName, docId) { return doc(db, getCollectionPath(colName), docId); }
+
+  if (isCloudEnabled) {
+    const initAuth = async () => {
+      try {
+        if (useEnvironmentFirebase && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) { 
+        console.error("認証エラー:", e); 
+      }
+    };
+    initAuth();
+
+    onAuthStateChanged(auth, (user) => {
+      firebaseUser = user;
+      if (user) {
+        listenToFirestore();
+      }
+    });
+  } else {
+    allUsers = JSON.parse(localStorage.getItem('users_data') || '{}');
+  }
+
+  let unsubUsers, unsubExpenses, unsubIncomes;
+
+  function listenToFirestore() {
+    if (!firebaseUser) return;
+    
+    if (unsubUsers) unsubUsers();
+    if (unsubExpenses) unsubExpenses();
+    if (unsubIncomes) unsubIncomes();
+
+    unsubUsers = onSnapshot(getCollectionRef('users'), (snapshot) => {
+      allUsers = {};
+      snapshot.forEach(d => { allUsers[d.id] = d.data(); });
+    }, (err) => {
+        console.error("users同期エラー:", err);
+        // ローカル実行時にFirestoreのセキュリティルールで弾かれた場合の通知
+        if (err.code === 'permission-denied' && !useEnvironmentFirebase) {
+            alert("Firebaseの権限エラーです。ご自身のFirebase ConsoleからFirestoreの「ルール」をテストモード(allow read, write: if true;)に変更してください。");
+        }
+    });
+
+    unsubExpenses = onSnapshot(getCollectionRef('expenses'), (snapshot) => {
+      allExpenses = [];
+      snapshot.forEach(d => { allExpenses.push({ ...d.data(), id: d.id }); });
+      refreshCurrentUserLocalData();
+    }, (err) => console.error("expenses同期エラー:", err));
+
+    unsubIncomes = onSnapshot(getCollectionRef('incomes'), (snapshot) => {
+      allIncomes = [];
+      snapshot.forEach(d => { allIncomes.push({ ...d.data(), id: d.id }); });
+      refreshCurrentUserLocalData();
+    }, (err) => console.error("incomes同期エラー:", err));
+  }
 
   // ==========================================
   // ★ OpenRouterから最適化された無料枠モデルを自動取得する関数
@@ -648,58 +740,6 @@
   window.closeHelpModal = function() {
     document.getElementById('helpModal').classList.add('hidden');
   };
-
-  try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    isCloudEnabled = true;
-    
-    const badge = document.getElementById('syncStatusBadge');
-    badge.innerText = 'Cloud Sync On';
-    badge.className = 'cloud-badge';
-  } catch (e) {
-    console.error("Firebase Initialization Error:", e);
-    alert("クラウド設定の初期化に失敗しました。ローカルモードで動作します。");
-  }
-
-  function getCollectionRef(colName) { return collection(db, colName); }
-  function getDocRef(colName, docId) { return doc(db, colName, docId); }
-
-  if (isCloudEnabled) {
-    const initAuth = async () => {
-      try { await signInAnonymously(auth); } catch (e) { console.error("匿名認証エラー:", e); }
-    };
-    initAuth();
-
-    onAuthStateChanged(auth, (user) => {
-      firebaseUser = user;
-      if (user) listenToFirestore();
-    });
-  } else {
-    allUsers = JSON.parse(localStorage.getItem('users_data') || '{}');
-  }
-
-  function listenToFirestore() {
-    if (!firebaseUser) return;
-    
-    onSnapshot(getCollectionRef('users'), (snapshot) => {
-      allUsers = {};
-      snapshot.forEach(d => { allUsers[d.id] = d.data(); });
-    }, (err) => console.error("users同期エラー:", err));
-
-    onSnapshot(getCollectionRef('expenses'), (snapshot) => {
-      allExpenses = [];
-      snapshot.forEach(d => { allExpenses.push({ ...d.data(), id: d.id }); });
-      refreshCurrentUserLocalData();
-    }, (err) => console.error("expenses同期エラー:", err));
-
-    onSnapshot(getCollectionRef('incomes'), (snapshot) => {
-      allIncomes = [];
-      snapshot.forEach(d => { allIncomes.push({ ...d.data(), id: d.id }); });
-      refreshCurrentUserLocalData();
-    }, (err) => console.error("incomes同期エラー:", err));
-  }
 
   function refreshCurrentUserLocalData() {
     if (window.currentUser) {
@@ -801,6 +841,7 @@
       window.loadUserData();
       window.migrateLocalToCloudIfNeeded(window.currentUser);
       window.showUpdateModalIfNeeded();
+      window.displayLatestModel(); // APIモデル確認
     } else {
       document.getElementById('authView').classList.remove('hidden');
       document.getElementById('appView').classList.add('hidden');
@@ -1465,7 +1506,6 @@
     }
   };
 
-
   // ==========================================
   // ★ WebRTCカメラ (ハイブリッド方式)
   // ==========================================
@@ -1507,6 +1547,84 @@
 
   window.closeCameraModal = function() {
     const modal = document.getElementById('cameraModal');
+    modal.classList.add('hidden');
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+      currentStream = null;
+    }
+  };
+
+  window.takePhoto = async function() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    window.closeCameraModal();
+    
+    const file = dataURLtoFile(dataUrl, `receipt_${Date.now()}.jpg`);
+    await window.handleImageUpload({ target: { files: [file], value: '' } });
+  };
+
+  function dataURLtoFile(dataurl, filename) {
+    let arr = dataurl.split(','),
+        mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), 
+        n = bstr.length, 
+        u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, {type:mime});
+  }
+
+  // ==========================================
+  // AI 画像解析 (OCR)
+  // ==========================================
+  async function compressImage(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = event => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const max_size = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > max_size) {
+            height *= max_size / width;
+            width = max_size;
+          } else if (height > max_size) {
+            width *= max_size / height;
+            height = max_size;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+      };
+    });
+  }
+
+  window.handleImageUpload = async function(e) {
+    const file = e.target?.files[0] || e.target;
+    if (!file || !file.name) return;
+
+    const apiKey = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
+    if (!apiKey) { if(e.target.value) e.target.value = ''; return alert("APIキーを設定してください。"); }
+    
+    const loadingMsg = document.getElementById('loadingMsg');
+    loadingMsg.innerText = 'AIが解析中...';
     loadingMsg.classList.remove('hidden');
 
     try {
