@@ -82,6 +82,8 @@
       font-weight: bold;
       opacity: 0.7;
       transition: all 0.2s;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .book-tab.active {
       background: var(--card-bg);
@@ -90,13 +92,21 @@
       box-shadow: 0 -2px 5px rgba(0,0,0,0.02);
     }
     .book-tab-add {
-      padding: 10px 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 12px 12px 0 0;
+      background: transparent;
+      border: 1px dashed var(--border-color);
+      border-bottom: none;
       color: #888;
       display: flex;
       align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+      font-size: 13px;
+      margin-bottom: 0;
     }
-    .book-tab-add > span { cursor: pointer; transition: all 0.2s; }
-    .book-tab-add > span:hover { color: var(--text-color); }
+    .book-tab-add:hover { background: #e0e0e0; color: var(--text-color); border-color: transparent; }
 
     button {
       background: var(--primary); color: #fff; border: none;
@@ -199,15 +209,48 @@
     .update-notice {
       background: #f0ebeb; border: 1px solid #d0c3c3; padding: 12px; border-radius: 8px; margin-bottom: 16px;
     }
+
+    /* お知らせツールチップ */
+    #notificationTooltip {
+      position: absolute;
+      top: 36px;
+      right: -5px;
+      background: var(--primary);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      z-index: 100;
+      pointer-events: none;
+    }
+    #notificationTooltip::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      right: 14px;
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      transform: rotate(45deg);
+    }
   </style>
 </head>
 <body>
 
   <header>
     <h1>Kakeibot <span id="syncStatusBadge" class="local-badge">Local</span></h1>
-    <div id="headerAuthInfo" class="hidden" style="display: flex; align-items: center; gap: 12px;">
+    <div id="headerAuthInfo" class="hidden" style="display: flex; align-items: center; gap: 16px; position: relative;">
       <span style="font-size: 14px; font-weight: bold; color: var(--primary); display:flex; align-items:center;" id="displayUserId"></span>
-      <button class="outline" style="padding: 6px 12px; font-size: 12px;" onclick="logout()">ログアウト</button>
+      
+      <!-- ベルマーク (お知らせ) -->
+      <div style="position: relative; cursor: pointer; display: flex; align-items: center;" onclick="openNotification()">
+        <span class="material-symbols-outlined" style="font-size: 26px; color: var(--primary);">notifications</span>
+        <div id="notificationBadge" class="hidden" style="position: absolute; top: 0px; right: 0px; width: 10px; height: 10px; background: var(--red-text); border-radius: 50%; border: 2px solid var(--card-bg);"></div>
+        <!-- ツールチップポップアップ -->
+        <div id="notificationTooltip" class="hidden">お知らせがあります！</div>
+      </div>
     </div>
   </header>
   
@@ -373,6 +416,13 @@
         </div>
       </div>
 
+      <!-- ポイント利用の分析 -->
+      <div class="card hidden" id="pointAnalysisCard">
+        <h2 style="margin-bottom: 12px;">ポイント利用内訳</h2>
+        <canvas id="pointChart" width="400" height="200"></canvas>
+        <ul id="pointChartLegend" class="chart-legend"></ul>
+      </div>
+
       <div class="card">
         <h2 id="tenDaysTitle">10日ごとの推移</h2>
         <canvas id="tenDaysChart" width="400" height="200"></canvas>
@@ -410,6 +460,22 @@
     <!-- 6. 設定タブ -->
     <div id="settings" class="tab-content">
       
+      <div class="card">
+        <h2 style="color: var(--primary);">アカウント管理</h2>
+        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">
+          ログインIDとPINパスワードを変更します。データは自動的に引き継がれます。
+        </p>
+        <button onclick="logout()" class="outline" style="width: 100%; border-color: var(--red-text); color: var(--red-text); margin-bottom: 16px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">logout</span> ログアウト
+        </button>
+        
+        <label>新しいログインID</label>
+        <input type="text" id="newAuthId" placeholder="新しいID">
+        <label>新しいPIN (数字4桁)</label>
+        <input type="password" id="newAuthPin" placeholder="新しいPIN" maxlength="4" pattern="\d{4}">
+        <button onclick="updateCredentials()" style="width: 100%;">アカウント情報を変更</button>
+      </div>
+
       <!-- ★ ブック管理 -->
       <div class="card">
         <h2>ブック(帳簿)の管理 <span class="help-icon" onclick="showHelp('book')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
@@ -437,18 +503,6 @@
           <input type="text" id="newCategoryInput" placeholder="新しいカテゴリ名" style="margin-bottom:0;">
           <button onclick="addCustomCategory()" style="white-space:nowrap;">追加</button>
         </div>
-      </div>
-
-      <div class="card">
-        <h2>アカウント設定</h2>
-        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">
-          ログインIDとPINパスワードを変更します。データは自動的に引き継がれます。
-        </p>
-        <label>新しいログインID</label>
-        <input type="text" id="newAuthId" placeholder="新しいID">
-        <label>新しいPIN (数字4桁)</label>
-        <input type="password" id="newAuthPin" placeholder="新しいPIN" maxlength="4" pattern="\d{4}">
-        <button onclick="updateCredentials()" style="width: 100%;">アカウント情報を変更</button>
       </div>
 
       <div class="card">
@@ -624,23 +678,19 @@
     </div>
   </div>
 
-  <!-- アップデート通知モーダル -->
-  <div id="updateModal" class="modal-overlay hidden" style="z-index: 4000;">
+  <!-- お知らせ用通知モーダル -->
+  <div id="notificationModal" class="modal-overlay hidden" style="z-index: 4000;">
     <div class="modal-content" style="max-width: 350px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
         <h2 style="color:var(--primary); font-size:18px; display:flex; align-items:center; gap:8px;">
-          <span class="material-symbols-outlined">celebration</span> 新機能のお知らせ
+          <span class="material-symbols-outlined">notifications_active</span> 新機能のお知らせ
         </h2>
-        <span onclick="closeUpdateModal()" style="cursor:pointer; font-size:24px; color:#999; line-height:1;">&times;</span>
+        <span onclick="closeNotification()" style="cursor:pointer; font-size:24px; color:#999; line-height:1;">&times;</span>
       </div>
-      <div class="update-notice">
-        <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-          <li><b>ブック（帳簿）機能の追加:</b> 家計用、プライベート用など最大3つまで帳簿を分けて管理できるようになりました。</li>
-          <li><b>デザインの刷新:</b> より見やすく、ミニマルなモノクロ調のデザインに変更し、アイコン類もシンプルな輪郭デザインに一新しました。</li>
-          <li><b>アプリ名の変更:</b> 「Kakeibot」としてリニューアルしました。</li>
-        </ul>
+      <div class="update-notice" id="notificationContent">
+        <!-- JSで挿入されます -->
       </div>
-      <button onclick="closeUpdateModal()" style="width: 100%;">確認しました</button>
+      <button onclick="closeNotification()" style="width: 100%;">確認しました</button>
     </div>
   </div>
 
@@ -663,6 +713,19 @@
         </div>
         <label>店名 (一括変更)</label>
         <input type="text" id="ocrBatchStore" style="margin-bottom: 0;">
+      </div>
+
+      <!-- ポイント利用の設定 -->
+      <div style="background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+        <label style="display:flex; align-items:center; gap:4px; margin-bottom:8px;">
+          <span class="material-symbols-outlined" style="font-size:16px;">toll</span> ポイント利用 (任意)
+        </label>
+        <div style="display: flex; gap: 8px; margin-bottom: 0;">
+          <select id="ocrPointType" style="margin-bottom:0; flex:1;" onchange="window.handlePointTypeChange(this)">
+            <option value="">使わない</option>
+          </select>
+          <input type="number" id="ocrPointAmount" placeholder="利用ポイント数" style="margin-bottom:0; flex:1;" min="0">
+        </div>
       </div>
 
       <!-- 個別アイテムのリスト -->
@@ -724,7 +787,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.18.v12"; // バージョン管理用
+  const APP_VERSION = "2026.08.18.v14"; // バージョン管理用 (お知らせ制御用)
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -743,11 +806,15 @@
   window.userCategories = [...defaultCategories];
   window.aiAutoCategory = true;
 
+  // ポイント種類の管理
+  window.pointTypes = [];
+
   // グラフインスタンス
   window.doughnutChartInstance = null;
   window.tenDaysChartInstance = null;
   window.trendChartInstance = null;
   window.evalTrendChartInstance = null;
+  window.pointChartInstance = null;
   window.adminDoughnutChartInstance = null;
   window.adminTenDaysChartInstance = null;
   window.adminTrendChartInstance = null;
@@ -979,10 +1046,11 @@
       document.getElementById('displayUserId').innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; margin-right:4px;">person</span> ${window.currentUser}`;
       
       window.loadBooks(); // ブックのロード＆カテゴリ設定の読み込み
+      window.loadPointTypes(); // ポイント設定読み込み
       window.checkAdmin();
       window.loadUserData();
       window.migrateLocalToCloudIfNeeded(window.currentUser);
-      window.showUpdateModalIfNeeded();
+      window.checkNotification();
     } else {
       document.getElementById('authView').classList.remove('hidden');
       document.getElementById('appView').classList.add('hidden');
@@ -990,6 +1058,86 @@
       document.getElementById('bookTabsContainer').classList.add('hidden');
     }
   };
+
+  // --- お知らせ（ベルマーク）処理 ---
+  window.checkNotification = function() {
+    if (window.currentUser === ADMIN_ID) return;
+    const seenVersion = localStorage.getItem('seen_notification_version');
+    if (seenVersion !== APP_VERSION) {
+      document.getElementById('notificationBadge').classList.remove('hidden');
+      if (!sessionStorage.getItem('notified_tooltip_' + APP_VERSION)) {
+        const tooltip = document.getElementById('notificationTooltip');
+        tooltip.classList.remove('hidden');
+        sessionStorage.setItem('notified_tooltip_' + APP_VERSION, 'true');
+        setTimeout(() => { tooltip.classList.add('hidden'); }, 5000);
+      }
+    } else {
+      document.getElementById('notificationBadge').classList.add('hidden');
+      document.getElementById('notificationTooltip').classList.add('hidden');
+    }
+  };
+
+  window.openNotification = function() {
+    localStorage.setItem('seen_notification_version', APP_VERSION);
+    document.getElementById('notificationBadge').classList.add('hidden');
+    document.getElementById('notificationTooltip').classList.add('hidden');
+    
+    document.getElementById('notificationContent').innerHTML = `
+      <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
+        <li><b>ポイント記録機能:</b> レシート読み取り時などに「ポイント利用額」を記録し、分析できるようになりました。</li>
+        <li><b>ブックタブの改善:</b> タブを長押しして名前変更や削除、スワイプで並び替えができるようになりました。</li>
+        <li><b>お知らせ機能:</b> ベルマークから新機能情報が確認できるようになりました。</li>
+      </ul>
+    `;
+    document.getElementById('notificationModal').classList.remove('hidden');
+  };
+
+  window.closeNotification = function() {
+    document.getElementById('notificationModal').classList.add('hidden');
+  };
+
+  // --- ポイント種類管理 ---
+  window.loadPointTypes = function() {
+    const saved = localStorage.getItem(`point_types_${window.currentUser}`);
+    if (saved) {
+      try { window.pointTypes = JSON.parse(saved); } catch(e){}
+    } else {
+      window.pointTypes = ["PayPay", "楽天ポイント", "dポイント"];
+    }
+  };
+  
+  window.savePointTypes = function() {
+    localStorage.setItem(`point_types_${window.currentUser}`, JSON.stringify(window.pointTypes));
+  };
+
+  window.updatePointTypeSelect = function() {
+    const select = document.getElementById('ocrPointType');
+    if(!select) return;
+    const currentVal = select.value;
+    let html = '<option value="">ポイントを使わない</option>';
+    window.pointTypes.forEach(p => html += `<option value="${p}">${p}</option>`);
+    html += '<option value="NEW">➕ 新しいポイントを追加...</option>';
+    select.innerHTML = html;
+    if(currentVal && currentVal !== 'NEW') select.value = currentVal;
+  };
+
+  window.handlePointTypeChange = function(select) {
+    if (select.value === 'NEW') {
+      const newPt = prompt("新しいポイントの種類を入力してください");
+      if (newPt && newPt.trim()) {
+        const val = newPt.trim();
+        if (!window.pointTypes.includes(val)) {
+          window.pointTypes.push(val);
+          window.savePointTypes();
+        }
+        window.updatePointTypeSelect();
+        select.value = val;
+      } else {
+        select.value = '';
+      }
+    }
+  };
+
 
   // --- ブック管理ロジック ---
   window.loadBooks = function() {
@@ -1031,21 +1179,83 @@
     const container = document.getElementById('bookTabsContainer');
     if(!container) return;
     
-    let html = window.books.map(b => `
-      <div class="book-tab ${b.id === window.currentBookId ? 'active' : ''}" onclick="switchBook('${b.id}')">
+    let html = window.books.map((b, index) => `
+      <div class="book-tab ${b.id === window.currentBookId ? 'active' : ''}" 
+           onclick="switchBook('${b.id}')"
+           onpointerdown="startBookLongPress('${b.id}', event)"
+           onpointerup="cancelBookLongPress()"
+           onpointerleave="cancelBookLongPress()"
+           oncontextmenu="event.preventDefault(); openBookEditMenu('${b.id}'); return false;"
+           draggable="true"
+           ondragstart="handleBookDragStart(event, ${index})"
+           ondragover="handleBookDragOver(event)"
+           ondrop="handleBookDrop(event, ${index})"
+           ondragend="handleBookDragEnd(event)">
         ${b.name}
       </div>
     `).join('');
     
     if (window.books.length < 3) {
       html += `
-        <div class="book-tab-add" title="ブックを追加">
-          <span class="material-symbols-outlined" onclick="promptAddBook()" style="font-size: 20px;">add</span>
-          <span class="material-symbols-outlined help-icon" onclick="showHelp('book')" style="width:20px; height:20px; font-size:14px; margin-left:4px; padding:0;" title="ブック管理について">help</span>
+        <div class="book-tab-add" title="ブックを追加" onclick="promptAddBook()">
+          <span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+          <span class="material-symbols-outlined help-icon" onclick="event.stopPropagation(); showHelp('book')" style="width:20px; height:20px; font-size:14px; margin-left:4px; padding:0; background:transparent; border:none;" title="ブック管理について">help</span>
         </div>
       `;
     }
     container.innerHTML = html;
+  };
+
+  let bookPressTimer = null;
+  window.startBookLongPress = function(id, event) {
+    if(event.button === 2) return; // 右クリック時は無視
+    bookPressTimer = window.setTimeout(() => {
+      bookPressTimer = null;
+      window.openBookEditMenu(id);
+    }, 600);
+  };
+  window.cancelBookLongPress = function() {
+    if (bookPressTimer !== null) {
+      clearTimeout(bookPressTimer);
+      bookPressTimer = null;
+    }
+  };
+
+  window.openBookEditMenu = function(id) {
+    window.cancelBookLongPress();
+    const book = window.books.find(b => b.id === id);
+    if(!book) return;
+    
+    const action = prompt(`「${book.name}」の操作を選んでください。\n1: 名前変更\n2: 削除\n\n半角数字で 1 か 2 を入力してください。`);
+    if (action === '1') {
+      const newName = prompt("新しいブック名を入力してください", book.name);
+      if(newName && newName.trim()) window.renameBook(id, newName);
+    } else if (action === '2') {
+      window.deleteBook(id);
+    }
+  };
+
+  let draggedBookIndex = null;
+  window.handleBookDragStart = function(e, index) {
+    draggedBookIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => e.target.style.opacity = '0.5', 0);
+  };
+  window.handleBookDragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  window.handleBookDrop = function(e, index) {
+    e.preventDefault();
+    if (draggedBookIndex !== null && draggedBookIndex !== index) {
+      const item = window.books.splice(draggedBookIndex, 1)[0];
+      window.books.splice(index, 0, item);
+      window.saveBooks();
+    }
+  };
+  window.handleBookDragEnd = function(e) {
+    e.target.style.opacity = '';
+    draggedBookIndex = null;
   };
 
   window.promptAddBook = function() {
@@ -1142,18 +1352,6 @@
       }
       localStorage.removeItem(`incomes_data_${userId}`);
     }
-  };
-
-  window.showUpdateModalIfNeeded = function() {
-    if (window.currentUser === ADMIN_ID) return; 
-    const seenVersion = localStorage.getItem('seen_update_version');
-    if (seenVersion !== APP_VERSION) {
-      document.getElementById('updateModal').classList.remove('hidden');
-    }
-  };
-  window.closeUpdateModal = function() {
-    localStorage.setItem('seen_update_version', APP_VERSION);
-    document.getElementById('updateModal').classList.add('hidden');
   };
 
   window.loadUserSettings = function() {
@@ -1575,6 +1773,7 @@
     let noTotal = 0;
     
     monthData.forEach(e => {
+      if (e.isPoint) return; // 管理者グラフでもポイント利用分は除外
       const cost = e.price + e.tax;
       if (totals[e.category] !== undefined) totals[e.category] += cost;
       else totals[e.category] = cost;
@@ -1623,6 +1822,7 @@
 
     let blockTotals = [0, 0, 0];
     monthData.forEach(e => {
+      if (e.isPoint) return;
       const day = parseInt(e.date.split('-')[2], 10);
       const amount = e.price + e.tax;
       if (day <= 10) blockTotals[0] += amount;
@@ -1647,12 +1847,12 @@
     document.getElementById('adminTrendChartContainer').style.minWidth = minWidth;
     document.getElementById('adminEvalTrendChartContainer').style.minWidth = minWidth;
 
-    const expenseCategories = [...new Set(expData.map(e => e.category))];
+    const expenseCategories = [...new Set(expData.map(e => e.category))].filter(c => c !== "ポイント利用");
     const datasets = expenseCategories.map((cat, i) => {
       return {
         label: cat,
         data: targetMonths.map(m => {
-          return expData.filter(e => e.date.startsWith(m) && e.category === cat).reduce((sum, e) => sum + e.price + e.tax, 0);
+          return expData.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0);
         }),
         backgroundColor: chartColors[i % chartColors.length]
       };
@@ -1673,7 +1873,7 @@
     const noData = [];
     targetMonths.forEach(m => {
       let y = 0, n = 0;
-      expData.filter(e => e.date.startsWith(m)).forEach(e => {
+      expData.filter(e => e.date.startsWith(m) && !e.isPoint).forEach(e => {
         const cost = e.price + e.tax;
         if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
         else if (e.isNecessary === false) n += cost;
@@ -1694,8 +1894,8 @@
       data: {
         labels: targetMonths,
         datasets: [
-          { label: '必要(%)', data: yesData, backgroundColor: '#e6f2e6', borderColor: '#4da64d', borderWidth: 1 },
-          { label: '無駄(%)', data: noData, backgroundColor: '#f2e6e6', borderColor: '#c25959', borderWidth: 1 }
+          { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderColor: '#4da64d', borderWidth: 1 },
+          { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderColor: '#c25959', borderWidth: 1 }
         ]
       },
       options: {
@@ -1721,6 +1921,8 @@
       expData.sort((a, b) => b.date.localeCompare(a.date));
       expData.forEach(e => {
         const total = e.price + e.tax;
+        let amountHtml = `¥${total.toLocaleString()}`;
+        if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">-${e.pointAmount.toLocaleString()} pt</span>`;
         html += `
           <div class="history-item" style="cursor:default; margin-left:0;">
             <div>
@@ -1728,7 +1930,7 @@
               <div style="font-size:12px; color:#666; margin-top:2px;">${e.date} • ${maskText(e.store)}</div>
               <div style="font-size:12px; color:#666;">カテゴリ: ${e.category}</div>
             </div>
-            <div style="font-weight:bold;">¥${total.toLocaleString()}</div>
+            <div style="font-weight:bold;">${amountHtml}</div>
           </div>`;
       });
     }
@@ -1924,7 +2126,7 @@
         contents: [{
           parts: [
             { text: `
-              あなたは優秀な経理アシ আমেরアシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
+              あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
 【重要ルール】
 1. 画像が該当する書類でない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
 2. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
@@ -2048,7 +2250,7 @@ ${catInstructions}
       await fsSaveExpense(item);
       addedCount++;
     }
-    alert(`画像を解析し、${addedCount}件の記録を現在のブックに追加しました！`);
+    alert(`記録を保存し、${addedCount}件の記録を現在のブックに追加しました！`);
     window.tempParsedItems = [];
   };
 
@@ -2059,6 +2261,10 @@ ${catInstructions}
     const firstItem = window.tempParsedItems[0];
     document.getElementById('ocrBatchDate').value = firstItem.date || new Date().toISOString().split('T')[0];
     document.getElementById('ocrBatchStore').value = firstItem.store || "";
+    
+    // ポイント選択初期化
+    window.updatePointTypeSelect();
+    document.getElementById('ocrPointAmount').value = '';
 
     let html = '';
     window.tempParsedItems.forEach((item, index) => {
@@ -2105,6 +2311,31 @@ ${catInstructions}
       }
     });
 
+    const ptType = document.getElementById('ocrPointType').value;
+    const ptAmount = parseInt(document.getElementById('ocrPointAmount').value) || 0;
+    
+    if (ptType && ptType !== 'NEW' && ptAmount > 0) {
+      const ptExpense = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        appUserId: window.currentUser,
+        bookId: window.currentBookId,
+        date: batchDate || new Date().toISOString().split('T')[0],
+        store: batchStore || "不明",
+        name: `${ptType}利用`,
+        unit_price: 0,
+        qty: 1,
+        price: 0,
+        tax: 0,
+        category: "ポイント利用",
+        memo: "レシート値引き",
+        isNecessary: null,
+        isPoint: true,
+        pointType: ptType,
+        pointAmount: ptAmount
+      };
+      window.tempParsedItems.push(ptExpense);
+    }
+
     document.getElementById('ocrConfirmModal').classList.add('hidden');
     await window.saveParsedItems(window.tempParsedItems);
   };
@@ -2147,7 +2378,7 @@ ${catInstructions}
   };
 
   window.updateUI = function() {
-    const unreviewed = window.expenses.filter(e => e.isNecessary === null);
+    const unreviewed = window.expenses.filter(e => e.isNecessary === null && !e.isPoint);
     document.getElementById('badgeUnreviewed').innerText = unreviewed.length > 0 ? `(${unreviewed.length})` : '';
 
     const swipeArea = document.getElementById('swipeArea');
@@ -2190,7 +2421,7 @@ ${catInstructions}
 
   window.updateSwipeHistory = function() {
     const historyList = document.getElementById('swipeHistoryList');
-    const reviewed = window.expenses.filter(e => e.isNecessary !== null && e.name !== "外税(消費税)");
+    const reviewed = window.expenses.filter(e => e.isNecessary !== null && e.name !== "外税(消費税)" && !e.isPoint);
     if (reviewed.length === 0) { historyList.innerHTML = '<p style="color:#888;">スワイプ記録がありません</p>'; return; }
 
     const byDate = {};
@@ -2323,12 +2554,16 @@ ${catInstructions}
     let html = '';
     for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
       let dateTotal = 0;
-      Object.values(byDate[date]).forEach(storeArr => storeArr.forEach(e => dateTotal += (e.price + e.tax)));
+      Object.values(byDate[date]).forEach(storeArr => storeArr.forEach(e => {
+        if(!e.isPoint) dateTotal += (e.price + e.tax);
+      }));
       html += `<details open><summary>${date} <span style="color:#888">¥${dateTotal.toLocaleString()}</span></summary><div>`;
       
       for (const store in byDate[date]) {
         let storeTotal = 0;
-        byDate[date][store].forEach(e => storeTotal += (e.price + e.tax));
+        byDate[date][store].forEach(e => {
+          if(!e.isPoint) storeTotal += (e.price + e.tax);
+        });
         const safeStore = store.replace(/'/g, "\\'").replace(/"/g, "&quot;");
         
         html += `<details open><summary class="tree-store-summary">
@@ -2349,10 +2584,13 @@ ${catInstructions}
           let evalIcon = '<span style="color:#ccc; font-size:12px; margin-right:4px;">ー</span>';
           if (e.isNecessary === true && e.name !== "外税(消費税)") evalIcon = '<span class="material-symbols-outlined" style="background:var(--pale-green); border:1px solid var(--pale-green-border); border-radius:4px; padding:2px 4px; font-size:12px; color:var(--green-text); vertical-align: text-bottom; margin-right:4px;">thumb_up</span>';
           if (e.isNecessary === false) evalIcon = '<span class="material-symbols-outlined" style="background:var(--pale-red); border:1px solid var(--pale-red-border); border-radius:4px; padding:2px 4px; font-size:12px; color:var(--red-text); vertical-align: text-bottom; margin-right:4px;">thumb_down</span>';
+          if (e.isPoint) evalIcon = '<span class="material-symbols-outlined" style="background:#eeeeee; border:1px solid #e0e0e0; border-radius:4px; padding:2px 4px; font-size:12px; color:#666; vertical-align: text-bottom; margin-right:4px;">toll</span>';
           
-          const total = e.price + e.tax;
           const qtyText = e.qty > 1 ? `<span style="font-size:11px; color:#888;">(@¥${e.unit_price}×${e.qty})</span>` : '';
           const memoText = e.memo ? `<div class="memo-badge"><span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">edit_document</span> ${e.memo}</div>` : '';
+
+          let amountHtml = `¥${(e.price + e.tax).toLocaleString()}`;
+          if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">-${e.pointAmount.toLocaleString()} pt</span>`;
 
           html += `
             <div class="history-item" onclick="openEditModal('${e.id}')">
@@ -2361,7 +2599,7 @@ ${catInstructions}
                 <div style="font-size:12px; color:#888; margin-top:2px;">${e.category}</div>
                 ${memoText}
               </div>
-              <div style="font-weight:bold;">¥${total.toLocaleString()}</div>
+              <div style="font-weight:bold;">${amountHtml}</div>
             </div>`;
         });
         html += `</div></details>`;
@@ -2426,7 +2664,7 @@ ${catInstructions}
     const selectedMonth = document.getElementById('monthSelector').value;
     let html = '';
     if (window.currentAnalysisMode === 'expense') {
-      let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.category === categoryName);
+      let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.category === categoryName && !e.isPoint);
       filtered.forEach(item => {
         const total = item.price + item.tax;
         html += `
@@ -2459,7 +2697,7 @@ ${catInstructions}
   window.showWasteDetails = function() {
     const selectedMonth = document.getElementById('monthSelector').value;
     let html = '';
-    let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.isNecessary === false);
+    let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.isNecessary === false && !e.isPoint);
     
     filtered.forEach(item => {
       const total = item.price + item.tax;
@@ -2498,6 +2736,7 @@ ${catInstructions}
       if (window.tenDaysChartInstance) window.tenDaysChartInstance.destroy();
       if (window.trendChartInstance) window.trendChartInstance.destroy();
       if (window.evalTrendChartInstance) window.evalTrendChartInstance.destroy();
+      if (window.pointChartInstance) window.pointChartInstance.destroy();
       return;
     }
 
@@ -2506,13 +2745,26 @@ ${catInstructions}
     const monthData = chartData.filter(e => e.date.startsWith(selectedMonth));
     const totals = {};
     let monthTotal = 0;
+    
+    let pointTotals = {};
+    let pointTotalAmount = 0;
 
     if(window.currentAnalysisMode === 'expense') {
       document.getElementById('evaluationCard').classList.remove('hidden');
+      document.getElementById('pointAnalysisCard').classList.remove('hidden');
       let yesTotal = 0;
       let noTotal = 0;
 
       monthData.forEach(e => {
+        if (e.isPoint) {
+          if (e.pointAmount > 0) {
+            if(!pointTotals[e.pointType]) pointTotals[e.pointType] = 0;
+            pointTotals[e.pointType] += e.pointAmount;
+            pointTotalAmount += e.pointAmount;
+          }
+          return;
+        }
+
         const cost = e.price + e.tax;
         if(totals[e.category] !== undefined) totals[e.category] += cost;
         else totals[e.category] = cost;
@@ -2542,8 +2794,39 @@ ${catInstructions}
           </div>
         </div>
       `;
+
+      // ポイントグラフ描画
+      if (pointTotalAmount > 0) {
+        const ptCtx = document.getElementById('pointChart').getContext('2d');
+        if (window.pointChartInstance) window.pointChartInstance.destroy();
+        
+        window.pointChartInstance = new Chart(ptCtx, {
+          type: 'doughnut',
+          data: { labels: Object.keys(pointTotals), datasets: [{ data: Object.values(pointTotals), backgroundColor: chartColors, borderWidth: 0 }] },
+          options: { responsive: true, plugins: { legend: { display: false } }, cutout: '70%' }
+        });
+        
+        let pLegendHtml = '';
+        let pColorIndex = 0;
+        for (const ptCat of Object.keys(pointTotals).sort((a,b) => pointTotals[b] - pointTotals[a])) {
+          const val = pointTotals[ptCat];
+          const pct = pointTotalAmount === 0 ? 0 : Math.round((val / pointTotalAmount) * 100);
+          const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${chartColors[pColorIndex % chartColors.length]};margin-right:8px;"></span>`;
+          pLegendHtml += `<li><div>${dot}${ptCat}</div> <div><span>${val.toLocaleString()} pt</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+          pColorIndex++;
+        }
+        pLegendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:var(--primary); font-weight:bold;">${pointTotalAmount.toLocaleString()} pt</span></li>`;
+        document.getElementById('pointChartLegend').innerHTML = pLegendHtml;
+        document.getElementById('pointChart').classList.remove('hidden');
+      } else {
+        if (window.pointChartInstance) window.pointChartInstance.destroy();
+        document.getElementById('pointChart').classList.add('hidden');
+        document.getElementById('pointChartLegend').innerHTML = '<li style="justify-content:center; color:#888; padding:20px; border:none; cursor:default;">ポイント利用はありません</li>';
+      }
+
     } else {
       document.getElementById('evaluationCard').classList.add('hidden');
+      document.getElementById('pointAnalysisCard').classList.add('hidden');
       monthData.forEach(i => {
         if(!totals[i.source]) totals[i.source] = 0;
         totals[i.source] += i.amount; monthTotal += i.amount;
@@ -2579,6 +2862,7 @@ ${catInstructions}
 
     let blockTotals = [0, 0, 0]; 
     monthData.forEach(e => {
+      if (e.isPoint) return;
       const day = parseInt(e.date.split('-')[2], 10);
       const amount = window.currentAnalysisMode === 'expense' ? (e.price + e.tax) : e.amount;
       if (day <= 10) blockTotals[0] += amount;
@@ -2622,12 +2906,12 @@ ${catInstructions}
       document.getElementById('trendChartTitle').innerText = '一年間の推移 (出費項目別)';
       evalCard.classList.remove('hidden');
 
-      const expenseCategories = [...new Set(window.expenses.map(e => e.category))];
+      const expenseCategories = [...new Set(window.expenses.map(e => e.category))].filter(c => c !== "ポイント利用");
       const datasets = expenseCategories.map((cat, i) => {
         return {
           label: cat,
           data: targetMonths.map(m => {
-            return window.expenses.filter(e => e.date.startsWith(m) && e.category === cat).reduce((sum, e) => sum + e.price + e.tax, 0);
+            return window.expenses.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0);
           }),
           backgroundColor: chartColors[i % chartColors.length]
         };
@@ -2647,7 +2931,7 @@ ${catInstructions}
       const noData = [];
       targetMonths.forEach(m => {
         let y = 0, n = 0;
-        window.expenses.filter(e => e.date.startsWith(m)).forEach(e => {
+        window.expenses.filter(e => e.date.startsWith(m) && !e.isPoint).forEach(e => {
           const cost = e.price + e.tax;
           if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
           else if (e.isNecessary === false) n += cost;
@@ -2667,8 +2951,8 @@ ${catInstructions}
         data: {
           labels: targetMonths,
           datasets: [
-            { label: '必要(%)', data: yesData, backgroundColor: '#e6f2e6', borderColor: '#4da64d', borderWidth: 1 },
-            { label: '無駄(%)', data: noData, backgroundColor: '#f2e6e6', borderColor: '#c25959', borderWidth: 1 }
+            { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderColor: '#4da64d', borderWidth: 1 },
+            { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderColor: '#c25959', borderWidth: 1 }
           ]
         },
         options: {
@@ -2724,6 +3008,7 @@ ${catInstructions}
     let monthData = (isExp ? window.expenses : window.incomes).filter(e => e.date.startsWith(selectedMonth));
     let blockTotals = [0, 0, 0];
     monthData.forEach(e => {
+      if (e.isPoint) return;
       const day = parseInt(e.date.split('-')[2], 10);
       blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += isExp ? (e.price + e.tax) : e.amount;
     });
@@ -2735,7 +3020,7 @@ ${catInstructions}
 条件：10日ごとのペース配分への言及、具体的な改善・向上策の提示。
 【推測・補完機能】最新の経済状況や一般的な節約術などのあなたの持つ広範な内部知識を活用し、具体的なデータも交えてアドバイスに役立ててください。
 対象月: ${selectedMonth} / 上旬: ¥${blockTotals[0]} / 中旬: ¥${blockTotals[1]} / 下旬: ¥${blockTotals[2]}
-データ: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
+データ: ${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
         }]
       }]
     };
@@ -2780,8 +3065,11 @@ ${catInstructions}
     let dataList = isInc ? window.incomes : window.expenses;
     if (dataList.length === 0) return alert("データがありません。");
     
-    const headers = isInc ? ["ID", "日付", "収入源", "金額", "備考"] : ["ID", "日付", "店名", "商品名", "単価", "数量", "消費税", "総額", "カテゴリ", "評価", "備考"];
-    const rows = dataList.map(e => isInc ? [e.id, e.date, e.source, e.amount, e.memo] : [e.id, e.date, e.store, e.name, e.unit_price, e.qty, e.tax, e.price + e.tax, e.category, e.isNecessary === true ? 'YES' : e.isNecessary === false ? 'NO' : '未', e.memo]);
+    const headers = isInc ? ["ID", "日付", "収入源", "金額", "備考"] : ["ID", "日付", "店名", "商品名", "単価", "数量", "消費税", "総額", "カテゴリ", "評価", "ポイント種別", "利用ポイント", "備考"];
+    const rows = dataList.map(e => isInc ? 
+      [e.id, e.date, e.source, e.amount, e.memo] : 
+      [e.id, e.date, e.store, e.name, e.unit_price, e.qty, e.tax, e.price + e.tax, e.category, e.isNecessary === true ? 'YES' : e.isNecessary === false ? 'NO' : '未', e.pointType || '', e.pointAmount || '', e.memo]
+    );
     
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.join(",") + "\n" + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement('a'); link.href = encodeURI(csvContent); link.download = `${isInc ? 'incomes' : 'expenses'}_${window.currentUser}_${window.currentBookId}.csv`; link.click();
