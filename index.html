@@ -84,6 +84,7 @@
       transition: all 0.2s;
       user-select: none;
       -webkit-user-select: none;
+      touch-action: pan-y;
     }
     .book-tab.active {
       background: var(--card-bg);
@@ -234,6 +235,20 @@
       height: 8px;
       background: var(--primary);
       transform: rotate(45deg);
+    }
+
+    /* 設定タブのドラッグ中のアイテム */
+    .settings-book-item.dragging {
+      opacity: 0.8;
+      background-color: #f9f9f9 !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: scale(1.02);
+      z-index: 100;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+    .drag-handle:active {
+      cursor: grabbing !important;
     }
   </style>
 </head>
@@ -479,8 +494,8 @@
       <!-- ★ ブック管理 -->
       <div class="card">
         <h2>ブック(帳簿)の管理 <span class="help-icon" onclick="showHelp('book')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
-        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">家計、プライベートマネーなど、最大3つまで帳簿を分けて管理できます。</p>
-        <div id="bookSettingList" style="margin-bottom: 16px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">家計、プライベートマネーなど、最大3つまで帳簿を分けて管理できます。<br>※ 三本線をつかんで並べ替えができます。</p>
+        <div id="bookSettingList" style="margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #fff;">
         </div>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="newBookInput" placeholder="新しいブック名" style="margin-bottom:0;">
@@ -678,15 +693,15 @@
     </div>
   </div>
 
-  <!-- ブック操作メニューモーダル -->
-  <div id="bookEditMenuModal" class="modal-overlay hidden" style="z-index: 3000;">
-    <div class="modal-content" style="max-width: 300px; padding: 20px;">
-      <h2 id="bookEditMenuTitle" style="margin-bottom: 20px; font-size: 16px; text-align: center; color: var(--text-color);"></h2>
-      <input type="hidden" id="bookEditMenuId">
-      <button onclick="executeBookMenuRename()" style="margin-bottom: 12px; width: 100%;">名前を変更する</button>
-      <button onclick="executeBookMenuDelete()" class="outline" style="margin-bottom: 20px; width: 100%; border-color: var(--red-text); color: var(--red-text);">このブックを削除</button>
-      <button onclick="closeBookEditMenuModal()" class="outline" style="width: 100%; border-color: #999; color: #666;">キャンセル</button>
-    </div>
+  <!-- ブックのコンテキストメニュー (予測変換風) -->
+  <div id="bookContextMenu" class="hidden" style="position: fixed; background: #fff; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; padding: 4px; z-index: 5000; display: flex; flex-direction: column; min-width: 120px;">
+    <input type="hidden" id="bookEditMenuId">
+    <button onclick="executeBookMenuRename()" style="background: transparent; color: var(--text-color); text-align: left; padding: 10px 12px; font-weight: normal; border-radius: 4px; justify-content: flex-start; margin: 0; box-shadow: none;">
+      <span class="material-symbols-outlined" style="font-size:16px;">edit</span> 名前を変更
+    </button>
+    <button onclick="executeBookMenuDelete()" style="background: transparent; color: var(--red-text); text-align: left; padding: 10px 12px; font-weight: normal; border-radius: 4px; justify-content: flex-start; margin: 0; box-shadow: none;">
+      <span class="material-symbols-outlined" style="font-size:16px;">delete</span> 削除
+    </button>
   </div>
 
   <!-- お知らせ用通知モーダル -->
@@ -798,7 +813,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.18.v14"; // バージョン管理用 (お知らせ制御用)
+  const APP_VERSION = "2026.08.18.v15"; // バージョン管理用 (お知らせ制御用)
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -1150,6 +1165,17 @@
     }
   };
 
+  // 画面のどこかをクリックしたときにコンテキストメニューを閉じる処理
+  document.addEventListener('pointerdown', function(e) {
+    const menu = document.getElementById('bookContextMenu');
+    // メニューが表示されていて、クリック先がメニュー内でもブックタブでもない場合
+    if (menu && !menu.classList.contains('hidden')) {
+      if (!menu.contains(e.target) && !e.target.closest('.book-tab')) {
+        menu.classList.add('hidden');
+      }
+    }
+  });
+
 
   // --- ブック管理ロジック ---
   window.loadBooks = function() {
@@ -1194,10 +1220,11 @@
     let html = window.books.map((b, index) => `
       <div class="book-tab ${b.id === window.currentBookId ? 'active' : ''}" 
            onclick="switchBook('${b.id}')"
-           onpointerdown="startBookLongPress('${b.id}', event)"
-           onpointerup="cancelBookLongPress()"
-           onpointerleave="cancelBookLongPress()"
-           oncontextmenu="event.preventDefault(); openBookEditMenu('${b.id}'); return false;"
+           onpointerdown="startBookPointerDown('${b.id}', event)"
+           onpointermove="handleBookPointerMove(event)"
+           onpointerup="cancelBookPointerUp()"
+           onpointerleave="cancelBookPointerUp()"
+           oncontextmenu="event.preventDefault(); openBookContextMenu('${b.id}', this); return false;"
            draggable="true"
            ondragstart="handleBookDragStart(event, ${index})"
            ondragover="handleBookDragOver(event)"
@@ -1219,32 +1246,58 @@
   };
 
   let bookPressTimer = null;
-  window.startBookLongPress = function(id, event) {
+  let bookStartX = 0, bookStartY = 0;
+  let isDraggingBook = false;
+
+  window.startBookPointerDown = function(id, event) {
     if(event.button === 2) return; // 右クリック時は無視
+    bookStartX = event.clientX;
+    bookStartY = event.clientY;
+    isDraggingBook = false;
+
     bookPressTimer = window.setTimeout(() => {
       bookPressTimer = null;
-      window.openBookEditMenu(id);
+      if (!isDraggingBook) {
+        window.openBookContextMenu(id, event.target);
+      }
     }, 300);
   };
-  window.cancelBookLongPress = function() {
+  
+  window.handleBookPointerMove = function(event) {
+    if (bookPressTimer) {
+      const dx = Math.abs(event.clientX - bookStartX);
+      const dy = Math.abs(event.clientY - bookStartY);
+      if (dx > 5 || dy > 5) {
+        clearTimeout(bookPressTimer);
+        bookPressTimer = null;
+        isDraggingBook = true;
+      }
+    }
+  };
+
+  window.cancelBookPointerUp = function() {
     if (bookPressTimer !== null) {
       clearTimeout(bookPressTimer);
       bookPressTimer = null;
     }
   };
 
-  window.openBookEditMenu = function(id) {
-    window.cancelBookLongPress();
+  window.openBookContextMenu = function(id, targetElement) {
+    window.cancelBookPointerUp();
     const book = window.books.find(b => b.id === id);
     if(!book) return;
     
     document.getElementById('bookEditMenuId').value = id;
-    document.getElementById('bookEditMenuTitle').innerText = `「${book.name}」の操作`;
-    document.getElementById('bookEditMenuModal').classList.remove('hidden');
+    
+    const rect = targetElement.getBoundingClientRect();
+    const menu = document.getElementById('bookContextMenu');
+    menu.style.left = rect.left + 'px';
+    menu.style.top = (rect.bottom + 5) + 'px';
+    menu.classList.remove('hidden');
   };
 
-  window.closeBookEditMenuModal = function() {
-    document.getElementById('bookEditMenuModal').classList.add('hidden');
+  window.closeBookContextMenu = function() {
+    document.getElementById('bookContextMenu').classList.add('hidden');
   };
 
   window.executeBookMenuRename = function() {
@@ -1256,13 +1309,13 @@
         window.renameBook(id, newName);
       }
     }
-    window.closeBookEditMenuModal();
+    window.closeBookContextMenu();
   };
 
   window.executeBookMenuDelete = function() {
     const id = document.getElementById('bookEditMenuId').value;
     window.deleteBook(id);
-    window.closeBookEditMenuModal();
+    window.closeBookContextMenu();
   };
 
   let draggedBookIndex = null;
@@ -1304,12 +1357,20 @@
     const list = document.getElementById('bookSettingList');
     if(!list) return;
     list.innerHTML = window.books.map((b, i) => `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:${i === window.books.length - 1 ? 'none' : '1px solid var(--border-color)'};">
-        ${b.id === 'default' 
-          ? `<span style="font-size:14px; color:var(--primary); font-weight:bold;">${b.name} <span style="font-size:11px;color:#999;font-weight:normal;">(基本ブック)</span></span>` 
-          : `<input type="text" value="${b.name}" onchange="renameBook('${b.id}', this.value)" style="margin-bottom:0; padding:6px; width:60%; font-size:14px;">
-             <button class="outline" style="padding:4px 8px; font-size:12px; border-color:var(--red-text); color:var(--red-text);" onclick="deleteBook('${b.id}')">削除</button>`
-        }
+      <div class="settings-book-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:${i === window.books.length - 1 ? 'none' : '1px solid var(--border-color)'}; transition: all 0.2s; background: #fff;"
+           draggable="true"
+           ondragstart="handleSettingsDragStart(event, ${i})"
+           ondragover="handleSettingsDragOver(event)"
+           ondrop="handleSettingsDrop(event, ${i})"
+           ondragend="handleSettingsDragEnd(event)">
+        <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+          ${b.id === 'default' 
+            ? `<span style="font-size:14px; color:var(--primary); font-weight:bold;">${b.name} <span style="font-size:11px;color:#999;font-weight:normal;">(基本ブック)</span></span>` 
+            : `<input type="text" value="${b.name}" onchange="renameBook('${b.id}', this.value)" style="margin-bottom:0; padding:6px; flex:1; font-size:14px;">
+               <button class="outline" style="padding:4px 8px; font-size:12px; border-color:var(--red-text); color:var(--red-text);" onclick="deleteBook('${b.id}')">削除</button>`
+          }
+        </div>
+        <span class="material-symbols-outlined drag-handle" style="cursor: grab; color: #bbb; margin-left: 8px;">drag_indicator</span>
       </div>
     `).join('');
     
@@ -1324,6 +1385,29 @@
       addInput.disabled = false;
       addInput.placeholder = "新しいブック名";
     }
+  };
+
+  let draggedSettingsIndex = null;
+  window.handleSettingsDragStart = function(e, index) {
+    draggedSettingsIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => e.target.classList.add('dragging'), 0);
+  };
+  window.handleSettingsDragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  window.handleSettingsDrop = function(e, index) {
+    e.preventDefault();
+    if (draggedSettingsIndex !== null && draggedSettingsIndex !== index) {
+      const item = window.books.splice(draggedSettingsIndex, 1)[0];
+      window.books.splice(index, 0, item);
+      window.saveBooks();
+    }
+  };
+  window.handleSettingsDragEnd = function(e) {
+    e.target.classList.remove('dragging');
+    draggedSettingsIndex = null;
   };
 
   window.addBook = function() {
@@ -3014,8 +3098,8 @@ ${catInstructions}
         data: {
           labels: targetMonths,
           datasets: [
-            { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderWidth: 0 },
-            { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderWidth: 0 }
+            { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderColor: '#4da64d', borderWidth: 1 },
+            { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderColor: '#c25959', borderWidth: 1 }
           ]
         },
         options: {
