@@ -1051,6 +1051,7 @@
       window.loadUserData();
       window.migrateLocalToCloudIfNeeded(window.currentUser);
       window.checkNotification();
+      window.restoreApiKey();
     } else {
       document.getElementById('authView').classList.remove('hidden');
       document.getElementById('appView').classList.add('hidden');
@@ -1535,20 +1536,28 @@
 
     if (isCloudEnabled) {
       try {
+        let oldData = {};
         if (newId !== oldId) {
-          const userSnap = await getDoc(getDocRef('users', newId));
-          if (userSnap.exists()) return alert("そのIDは既に他のユーザーに使用されています。");
+          const newUserSnap = await getDoc(getDocRef('users', newId));
+          if (newUserSnap.exists()) return alert("そのIDは既に他のユーザーに使用されています。");
+          const oldUserSnap = await getDoc(getDocRef('users', oldId));
+          if (oldUserSnap.exists()) oldData = oldUserSnap.data();
+          await deleteDoc(getDocRef('users', oldId));
+          oldData.pin = newPin;
+          await setDoc(getDocRef('users', newId), oldData);
+        } else {
+          await setDoc(getDocRef('users', newId), { pin: newPin }, { merge: true });
         }
-        await deleteDoc(getDocRef('users', oldId));
-        await setDoc(getDocRef('users', newId), { pin: newPin });
       } catch(e) {
         console.error("更新エラー:", e);
         return alert("アカウント情報の更新に失敗しました。");
       }
     } else {
       if (newId !== oldId && allUsers[newId]) return alert("そのIDは既に他のユーザーに使用されています。");
+      let oldData = allUsers[oldId] || {};
       delete allUsers[oldId];
-      allUsers[newId] = { pin: newPin };
+      oldData.pin = newPin;
+      allUsers[newId] = oldData;
       localStorage.setItem('users_data', JSON.stringify(allUsers));
     }
 
@@ -1605,10 +1614,35 @@
     }
   };
 
-  window.saveApiKey = function() {
+  window.restoreApiKey = async function() {
+    if (isCloudEnabled && firebaseUser && window.currentUser) {
+      try {
+        const userSnap = await getDoc(getDocRef('users', window.currentUser));
+        if (userSnap.exists() && userSnap.data().apiKey) {
+          const decodedKey = decodeURIComponent(atob(userSnap.data().apiKey));
+          localStorage.setItem('gemini_api_key', decodedKey);
+          document.getElementById('apiKey').value = decodedKey;
+        }
+      } catch(e) {
+        console.error("APIキー復元エラー:", e);
+      }
+    }
+  };
+
+  window.saveApiKey = async function() {
     const key = document.getElementById('apiKey').value.trim();
     if (!key) return alert("APIキーを入力してください。");
     localStorage.setItem('gemini_api_key', key);
+    
+    if (isCloudEnabled && firebaseUser && window.currentUser) {
+      try {
+        const encodedKey = btoa(encodeURIComponent(key));
+        await setDoc(getDocRef('users', window.currentUser), { apiKey: encodedKey }, { merge: true });
+      } catch(e) {
+        console.error("APIキーのクラウド保存エラー:", e);
+      }
+    }
+    
     alert("Gemini APIキーを保存しました。");
   };
 
@@ -1722,7 +1756,7 @@
     select.innerHTML = '<option value="">ユーザーを選択...</option>';
     Object.keys(allUsers).forEach(uid => {
       if (uid !== ADMIN_ID) {
-        select.innerHTML += `<option value="${uid}">ユーザー: ${maskText(uid)}</option>`;
+        select.innerHTML += `<option value="${uid}">ユーザー: ${uid}</option>`;
       }
     });
     document.getElementById('adminEmptyMsg').classList.remove('hidden');
@@ -1894,8 +1928,8 @@
       data: {
         labels: targetMonths,
         datasets: [
-          { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderColor: '#4da64d', borderWidth: 1 },
-          { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderColor: '#c25959', borderWidth: 1 }
+          { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderWidth: 0 },
+          { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderWidth: 0 }
         ]
       },
       options: {
@@ -1960,7 +1994,7 @@
     const uid = document.getElementById('adminUserSelect').value;
     if (!uid) return;
     
-    if (!confirm(`ユーザー(${maskText(uid)})とそのすべてのデータを削除しますか？\nこの操作は取り消せません。`)) return;
+    if (!confirm(`ユーザー(${uid})とそのすべてのデータを削除しますか？\nこの操作は取り消せません。`)) return;
 
     try {
       if (isCloudEnabled && firebaseUser) {
@@ -2951,8 +2985,8 @@ ${catInstructions}
         data: {
           labels: targetMonths,
           datasets: [
-            { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderColor: '#4da64d', borderWidth: 1 },
-            { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderColor: '#c25959', borderWidth: 1 }
+            { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderWidth: 0 },
+            { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderWidth: 0 }
           ]
         },
         options: {
