@@ -806,7 +806,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.18.v16"; // バージョン管理用 (お知らせ制御用)
+  const APP_VERSION = "2026.08.18.v17"; // バージョン管理用 (お知らせ制御用)
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -2143,8 +2143,8 @@
       data: {
         labels: targetMonths,
         datasets: [
-          { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderWidth: 0 },
-          { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderWidth: 0 }
+          { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 },
+          { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 }
         ]
       },
       options: {
@@ -3200,8 +3200,8 @@ ${catInstructions}
         data: {
           labels: targetMonths,
           datasets: [
-            { label: '必要(%)', data: yesData, backgroundColor: '#4da64d', borderColor: '#4da64d', borderWidth: 1 },
-            { label: '無駄(%)', data: noData, backgroundColor: '#c25959', borderColor: '#c25959', borderWidth: 1 }
+            { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 },
+            { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 }
           ]
         },
         options: {
