@@ -231,7 +231,11 @@
 
       <div class="card" id="manualForm">
         <h2>手動で登録</h2>
-        <label>日付</label><input type="date" id="inputDate">
+        <label>日付</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input type="date" id="inputDate" style="margin-bottom: 0; flex: 1;">
+          <button onclick="document.getElementById('inputDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+        </div>
         <label>店名</label><input type="text" id="inputStore" placeholder="例: セブンイレブン">
         <label>商品名</label><input type="text" id="inputName" placeholder="例: コーヒー">
         
@@ -256,7 +260,11 @@
     <div id="income" class="tab-content">
       <div class="card">
         <h2>収入を記録 <span class="help-icon" onclick="showHelp('income')">❓</span></h2>
-        <label>日付</label><input type="date" id="incomeDate">
+        <label>日付</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input type="date" id="incomeDate" style="margin-bottom: 0; flex: 1;">
+          <button onclick="document.getElementById('incomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+        </div>
         <label>収入源</label>
         <input type="text" id="incomeSource" list="incomeSourceOptions" placeholder="例: 給与、副業、メルカリ">
         <datalist id="incomeSourceOptions"></datalist>
@@ -427,7 +435,11 @@
     <div class="modal-content">
       <h2 style="margin-bottom: 16px;">内容の修正・削除</h2>
       <input type="hidden" id="editId">
-      <label>日付</label><input type="date" id="editDate">
+      <label>日付</label>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="date" id="editDate" style="margin-bottom: 0; flex: 1;">
+        <button onclick="document.getElementById('editDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+      </div>
       <label>店名</label><input type="text" id="editStore">
       <label>商品名</label><input type="text" id="editName">
       <div style="display: flex; gap: 10px;">
@@ -452,7 +464,11 @@
     <div class="modal-content">
       <h2 style="margin-bottom: 16px;">収入の修正・削除</h2>
       <input type="hidden" id="editIncomeId">
-      <label>日付</label><input type="date" id="editIncomeDate">
+      <label>日付</label>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="date" id="editIncomeDate" style="margin-bottom: 0; flex: 1;">
+        <button onclick="document.getElementById('editIncomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+      </div>
       <label>収入源</label><input type="text" id="editIncomeSource">
       <label>金額</label><input type="number" id="editIncomeAmount">
       <label>備考 (メモ)</label><input type="text" id="editIncomeMemo">
@@ -524,7 +540,7 @@
       <div id="dateCheckList" style="overflow-y: auto; flex: 1; margin-bottom: 16px;"></div>
       <div style="display: flex; gap: 10px;">
         <button onclick="skipDateCheckAndSave()" class="outline" style="flex: 1; border-color: #999; color: #666; font-size: 12px;">修正せず保存</button>
-        <button onclick="applyDateCheckAndSave()" style="flex: 1; font-size: 12px;">修正して保存</button>
+        <button onclick="applyDateCheckAndSave()" style="flex: 1; font-size: 12px;">一括修正して保存</button>
       </div>
     </div>
   </div>
@@ -538,7 +554,10 @@
       <input type="hidden" id="bulkEditOriginalStore">
       
       <label>変更後の日付 (空欄ならそのまま)</label>
-      <input type="date" id="bulkEditDate">
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="date" id="bulkEditDate" style="margin-bottom: 0; flex: 1;">
+        <button onclick="document.getElementById('bulkEditDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+      </div>
       <label>変更後の店名 (空欄ならそのまま)</label>
       <input type="text" id="bulkEditStore">
       <label>変更後のカテゴリ (変更なしの場合は「---」)</label>
@@ -1786,28 +1805,21 @@ ${catInstructions}
   // 日付確認モーダルの表示
   window.showDateCheckModal = function() {
     const listDiv = document.getElementById('dateCheckList');
-    let html = '';
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    let html = '<ul style="font-size: 12px; color: #444; padding-left: 20px; max-height: 150px; overflow-y: auto; margin-bottom:16px;">';
+    let suggestedDate = window.tempParsedItems.length > 0 ? window.tempParsedItems[0].date : new Date().toISOString().split('T')[0];
 
-    window.tempParsedItems.forEach((item, index) => {
-      const itemDate = new Date(item.date);
-      let diffDays = 0;
-      if (!isNaN(itemDate)) {
-        itemDate.setHours(0,0,0,0);
-        const diffTime = Math.abs(today - itemDate);
-        diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      }
-      const warnStyle = diffDays >= 7 ? 'background: #fff0f0; border-left: 3px solid var(--red-text);' : '';
-
-      html += `
-        <div style="padding: 10px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 8px; ${warnStyle}">
-          <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">${item.name} <span style="font-weight:normal; font-size:12px; color:#666;">(¥${item.price})</span></div>
-          <label style="font-size: 11px;">日付:</label>
-          <input type="date" id="dateCheckInput_${index}" value="${item.date}" style="padding: 8px; margin-bottom: 0;">
-        </div>
-      `;
+    window.tempParsedItems.forEach((item) => {
+      html += `<li>${item.name} <span style="color:#666;">(¥${item.price})</span> - 認識日: <span style="font-weight:bold; color:var(--red-text);">${item.date}</span></li>`;
     });
+    html += '</ul>';
+    
+    html += `
+      <label>修正後の日付 (レシート全体に適用)</label>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="date" id="batchDateCheckInput" value="${suggestedDate}" style="margin-bottom: 0; flex: 1;">
+        <button onclick="document.getElementById('batchDateCheckInput').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+      </div>
+    `;
     listDiv.innerHTML = html;
     document.getElementById('dateCheckModal').classList.remove('hidden');
   };
@@ -1818,10 +1830,12 @@ ${catInstructions}
   };
 
   window.applyDateCheckAndSave = async function() {
-    window.tempParsedItems.forEach((item, index) => {
-      const newVal = document.getElementById(`dateCheckInput_${index}`).value;
-      if (newVal) item.date = newVal;
-    });
+    const newVal = document.getElementById('batchDateCheckInput').value;
+    if (newVal) {
+      window.tempParsedItems.forEach((item) => {
+        item.date = newVal;
+      });
+    }
     document.getElementById('dateCheckModal').classList.add('hidden');
     await window.saveParsedItems(window.tempParsedItems);
   };
