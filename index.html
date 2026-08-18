@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kakeibot - Cloud Sync</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Material Symbols Outlined (輪郭アイコン) を読み込む -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
   
   <style>
@@ -68,6 +69,7 @@
       overflow-x: auto;
       white-space: nowrap;
       -webkit-overflow-scrolling: touch;
+      align-items: flex-end;
     }
     .book-tabs::-webkit-scrollbar { display: none; }
     .book-tab {
@@ -86,6 +88,17 @@
       opacity: 1;
       color: var(--primary);
       box-shadow: 0 -2px 5px rgba(0,0,0,0.02);
+    }
+    .book-tab-add {
+      padding: 10px 15px;
+      cursor: pointer;
+      color: #888;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    .book-tab-add:hover {
+      color: var(--text-color);
     }
 
     button {
@@ -201,8 +214,10 @@
     </div>
   </header>
   
+  <!-- ブック切り替えタブ -->
   <div id="bookTabsContainer" class="book-tabs hidden"></div>
 
+  <!-- 認証 (ログイン/新規登録) ビュー -->
   <div id="authView" class="container">
     <div class="card">
       <h2 style="text-align: center; margin-bottom: 24px; display:block;">ログイン / 新規登録</h2>
@@ -226,6 +241,7 @@
     </div>
   </div>
 
+  <!-- メインアプリ ビュー -->
   <div id="appView" class="container hidden">
     <div class="tabs">
       <div class="tab active" onclick="switchTab('record', this)">記録</div>
@@ -237,6 +253,7 @@
       <div class="tab hidden" id="tabAdminBtn" onclick="switchTab('admin', this)" style="color: var(--red-text);">管理者</div>
     </div>
 
+    <!-- 1. 記録タブ (出費) -->
     <div id="record" class="tab-content active">
       <div class="card" style="background: #f9f9f9;">
         <label>Gemini API Key</label>
@@ -292,6 +309,7 @@
       </div>
     </div>
 
+    <!-- 2. 収入タブ -->
     <div id="income" class="tab-content">
       <div class="card">
         <h2>収入を記録 <span class="help-icon" onclick="showHelp('income')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
@@ -313,14 +331,17 @@
       </div>
     </div>
 
+    <!-- 3. 整理(スワイプ)タブ -->
     <div id="swipe" class="tab-content">
       <h2>出費の必要性を振り返る <span class="help-icon" onclick="showHelp('swipe')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
       <div class="swipe-container" id="swipeArea">
-        </div>
+        <!-- JSで置換されます -->
+      </div>
       <h2 style="margin-top: 40px; margin-bottom: 16px;">これまでのスワイプ記録</h2>
       <div id="swipeHistoryList"></div>
     </div>
 
+    <!-- 4. 履歴タブ -->
     <div id="history" class="tab-content">
       <h2>出費履歴 <span class="help-icon" onclick="showHelp('history')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
       <p style="font-size: 12px; color: #888; margin-bottom: 12px;">タップして編集・削除が行えます。</p>
@@ -328,6 +349,7 @@
       <div id="historyList"></div>
     </div>
 
+    <!-- 5. 分析タブ -->
     <div id="analysis" class="tab-content">
       <div class="toggle-group">
         <button id="btnAnalysisExpense" onclick="setAnalysisMode('expense')">出費分析</button>
@@ -347,6 +369,7 @@
         <p style="font-size:11px; color:#999; text-align:center; margin-top:8px;">※グラフや凡例をタッチすると詳細履歴が表示されます</p>
       </div>
       
+      <!-- 評価の割合表示 -->
       <div class="card hidden" id="evaluationCard">
         <h2 style="margin-bottom: 8px;">出費の振り返り割合</h2>
         <div id="evaluationStats" style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
@@ -359,6 +382,7 @@
         <ul id="tenDaysLegend" class="chart-legend"></ul>
       </div>
 
+      <!-- 月次推移グラフ -->
       <div class="card">
         <h2 id="trendChartTitle">一年間の推移 (出費項目別)</h2>
         <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px;">
@@ -386,8 +410,10 @@
       </div>
     </div>
 
+    <!-- 6. 設定タブ -->
     <div id="settings" class="tab-content">
       
+      <!-- ★ ブック管理 -->
       <div class="card">
         <h2>ブック(帳簿)の管理 <span class="help-icon" onclick="showHelp('book')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
         <p style="font-size: 12px; color: #888; margin-bottom: 16px;">家計、プライベートマネーなど、最大3つまで帳簿を分けて管理できます。</p>
@@ -399,6 +425,7 @@
         </div>
       </div>
 
+      <!-- カテゴリ管理 -->
       <div class="card">
         <h2>分類(カテゴリ)の設定 <span class="help-icon" onclick="showHelp('settings')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
         <p style="font-size: 12px; color: #888; margin-bottom: 16px;">出費を分類するカテゴリを現在のブックに追加・削除できます。</p>
@@ -450,6 +477,7 @@
       </div>
     </div>
 
+    <!-- 7. 管理者タブ (特定ユーザーのみ表示) -->
     <div id="admin" class="tab-content">
       <div class="card" style="border-color: var(--pale-red-border); background: var(--pale-red);">
         <h2 style="color: var(--red-text);">管理者ダッシュボード</h2>
@@ -514,6 +542,8 @@
     </div>
   </div>
 
+  <!-- 各種モーダル -->
+  <!-- 出費の編集用モーダル -->
   <div id="editModal" class="modal-overlay hidden">
     <div class="modal-content">
       <h2 style="margin-bottom: 16px;">内容の修正・削除</h2>
@@ -542,6 +572,7 @@
     </div>
   </div>
 
+  <!-- 収入の編集用モーダル -->
   <div id="editIncomeModal" class="modal-overlay hidden">
     <div class="modal-content">
       <h2 style="margin-bottom: 16px;">収入の修正・削除</h2>
@@ -563,6 +594,7 @@
     </div>
   </div>
 
+  <!-- カテゴリ詳細/無駄詳細モーダル -->
   <div id="categoryModal" class="modal-overlay hidden">
     <div class="modal-content" style="max-height: 80vh;">
       <h2 id="categoryModalTitle" style="margin-bottom: 16px;"></h2>
@@ -571,6 +603,7 @@
     </div>
   </div>
 
+  <!-- Webカメラ撮影用モーダル -->
   <div id="cameraModal" class="modal-overlay hidden" style="z-index: 2000;">
     <div class="modal-content" style="padding: 16px; align-items: center; width: 90%; max-width: 500px;">
       <h2 style="margin-bottom: 16px;">書類等を撮影</h2>
@@ -585,6 +618,7 @@
     </div>
   </div>
 
+  <!-- ヘルプ用説明書モーダル -->
   <div id="helpModal" class="modal-overlay hidden" style="z-index: 3000;">
     <div class="modal-content">
       <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--primary); display:flex; align-items:center; gap:6px;"></h2>
@@ -593,6 +627,7 @@
     </div>
   </div>
 
+  <!-- アップデート通知モーダル -->
   <div id="updateModal" class="modal-overlay hidden" style="z-index: 4000;">
     <div class="modal-content" style="max-width: 350px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
@@ -612,6 +647,7 @@
     </div>
   </div>
 
+  <!-- OCR解析結果の確認・修正用モーダル -->
   <div id="ocrConfirmModal" class="modal-overlay hidden" style="z-index: 2500;">
     <div class="modal-content" style="max-height: 90vh; width: 95%; max-width: 500px;">
       <h2 style="margin-bottom: 12px; color: var(--primary); display:flex; align-items:center; gap:8px;">
@@ -621,6 +657,7 @@
         内容を確認し、必要に応じて修正してください。
       </p>
       
+      <!-- レシート全体の設定 -->
       <div style="background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
         <label>日付 (一括変更)</label>
         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
@@ -631,6 +668,7 @@
         <input type="text" id="ocrBatchStore" style="margin-bottom: 0;">
       </div>
 
+      <!-- 個別アイテムのリスト -->
       <label>読み取った商品一覧</label>
       <div id="ocrConfirmList" style="overflow-y: auto; flex: 1; margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; background: #fff;"></div>
       
@@ -641,6 +679,7 @@
     </div>
   </div>
 
+  <!-- 一括変更モーダル -->
   <div id="bulkEditModal" class="modal-overlay hidden" style="z-index: 2000;">
     <div class="modal-content">
       <h2 style="margin-bottom: 16px;">一括変更 (日付・店名)</h2>
@@ -719,11 +758,11 @@
   
   window.currentAnalysisMode = 'expense';
 
-  // 彩度を抑えたカラフルなカラーパレット（くすみカラー）
-  const chartColors = ['#8ca398', '#9d91a3', '#a39b8c', '#8c94a3', '#a38d8d', '#8ba1a1', '#a19c8b', '#9b8ba1'];
-  const barColors = ['#a39b8c', '#8ca398', '#8c94a3'];
-  const incomeChartColors = ['#8ca398', '#8b96a1', '#a18b95', '#98a18b', '#8b8fa1'];
-  const incomeBarColors = ['#8ca398', '#8b96a1', '#a18b95'];
+  // 彩度を少し上げたスモーキーなパステルカラー
+  const chartColors = ['#8cb0a0', '#b099c2', '#c2b388', '#889ec7', '#c78d8d', '#8dc7c7', '#c7ab7b', '#ba93c9'];
+  const barColors = ['#c2b388', '#8cb0a0', '#889ec7'];
+  const incomeChartColors = ['#8cb0a0', '#8e9dba', '#ba8e9c', '#9dba8e', '#8e94ba'];
+  const incomeBarColors = ['#8cb0a0', '#8e9dba', '#ba8e9c'];
 
   // ==========================================
   // ★ Firebase初期化 (プレビュー環境対応版)
@@ -994,11 +1033,33 @@
   window.renderBookTabs = function() {
     const container = document.getElementById('bookTabsContainer');
     if(!container) return;
-    container.innerHTML = window.books.map(b => `
+    
+    let html = window.books.map(b => `
       <div class="book-tab ${b.id === window.currentBookId ? 'active' : ''}" onclick="switchBook('${b.id}')">
         ${b.name}
       </div>
     `).join('');
+    
+    if (window.books.length < 3) {
+      html += `
+        <div class="book-tab-add" onclick="promptAddBook()" title="ブックを追加">
+          <span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
+  };
+
+  window.promptAddBook = function() {
+    if (window.books.length >= 3) {
+      alert("ブックは最大3つまでです。");
+      return;
+    }
+    const val = prompt("新しいブック名を入力してください");
+    if (val && val.trim()) {
+      window.books.push({id: 'book_' + Date.now(), name: val.trim()});
+      window.saveBooks();
+    }
   };
 
   window.renderBookSettings = function() {
@@ -1621,8 +1682,8 @@
       data: {
         labels: targetMonths,
         datasets: [
-          { label: '👍 必要(%)', data: yesData, backgroundColor: '#e8f5e9', borderColor: '#c8e6c9', borderWidth: 1 },
-          { label: '👎 無駄(%)', data: noData, backgroundColor: '#ffebee', borderColor: '#ffcdd2', borderWidth: 1 }
+          { label: '必要(%)', data: yesData, backgroundColor: '#ebf0eb', borderColor: '#a3b5a3', borderWidth: 1 },
+          { label: '無駄(%)', data: noData, backgroundColor: '#f0ebeb', borderColor: '#b5a3a3', borderWidth: 1 }
         ]
       },
       options: {
@@ -2594,8 +2655,8 @@ ${catInstructions}
         data: {
           labels: targetMonths,
           datasets: [
-            { label: '必要(%)', data: yesData, backgroundColor: '#e8f5e9', borderColor: '#c8e6c9', borderWidth: 1 },
-            { label: '無駄(%)', data: noData, backgroundColor: '#ffebee', borderColor: '#ffcdd2', borderWidth: 1 }
+            { label: '必要(%)', data: yesData, backgroundColor: '#ebf0eb', borderColor: '#a3b5a3', borderWidth: 1 },
+            { label: '無駄(%)', data: noData, backgroundColor: '#f0ebeb', borderColor: '#b5a3a3', borderWidth: 1 }
           ]
         },
         options: {
