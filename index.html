@@ -202,12 +202,12 @@
     <!-- 1. 記録タブ (出費) -->
     <div id="record" class="tab-content active">
       <div class="card" style="background: #f9f9f9;">
-        <label>OpenRouter API Key</label>
+        <label>Gemini API Key</label>
         <div style="display: flex; gap: 8px;">
-          <input type="text" id="apiKey" placeholder="sk-or-v1-..." style="margin-bottom: 0;">
+          <input type="text" id="apiKey" placeholder="APIキーを入力" style="margin-bottom: 0;">
           <button onclick="saveApiKey()">保存</button>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #666; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: 未設定</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #666; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
       </div>
 
       <div class="card">
@@ -505,9 +505,9 @@
       </div>
       <div class="update-notice">
         <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-          <li><b>OpenRouter API対応:</b> APIをOpenRouterに変更し、最適化された画像対応の無料枠モデルを自動で選択・利用する機能を導入しました。</li>
-          <li><b>Webリサーチ機能の追加:</b> Web検索を自動で行い、途切れた商品名の推測精度や、分析タブでのアドバイスの質が大幅に向上しました。</li>
-          <li><b>通信安定性の向上:</b> 特定のブラウザ環境で発生していたネットワークエラー（Failed to fetch）を解消しました。</li>
+          <li><b>API元の変更:</b> APIをGemini API(最新の3.7-flashベース)に戻し、より安定した画像解析を提供します。</li>
+          <li><b>内部知識による推論強化:</b> Web検索を利用せずとも、AI自身の知識を使って途切れた商品名を推論・補完できるようになりました。これによりアクセス制限エラー(429)が激減します。</li>
+          <li><b>カメラ機能・カテゴリのカスタマイズ機能</b> 等は引き続きご利用いただけます。</li>
         </ul>
       </div>
       <button onclick="closeUpdateModal()" style="width: 100%;">確認しました</button>
@@ -535,7 +535,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.17.v10"; // バージョン管理用
+  const APP_VERSION = "2026.08.18.v11"; // バージョン管理用
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -666,62 +666,6 @@
     }, (err) => console.error("incomes同期エラー:", err));
   }
 
-  // ==========================================
-  // ★ OpenRouterから最適化された無料枠モデルを自動取得する関数
-  // ==========================================
-  window.getOptimalFreeModel = async function(apiKey) {
-    let cachedModel = sessionStorage.getItem('optimal_openrouter_model');
-    if (cachedModel) return cachedModel;
-
-    try {
-        const res = await fetch("https://openrouter.ai/api/v1/models");
-        if (!res.ok) throw new Error("APIエラー");
-        const data = await res.json();
-        
-        // 無料枠のモデルをフィルタリング (価格が0のもの)
-        const freeModels = data.data.filter(m => {
-            return m.pricing && (m.pricing.prompt === "0" || m.pricing.prompt === "0.0" || parseFloat(m.pricing.prompt) === 0);
-        });
-
-        // Vision(画像解析)対応のものを優先して探す
-        const visionFreeModels = freeModels.filter(m => {
-             const desc = (m.description || "").toLowerCase();
-             const name = m.name.toLowerCase();
-             const id = m.id.toLowerCase();
-             return desc.includes("vision") || desc.includes("image") || name.includes("vision") || id.includes("vision") || id.includes("gemini");
-        });
-
-        let bestModel = "google/gemini-2.5-flash-free"; // フォールバックデフォルト
-        
-        if (visionFreeModels.length > 0) {
-            // 無料枠の中でも特に優秀なGeminiモデルを優先
-            const geminiModel = visionFreeModels.find(m => m.id.includes("gemini")) || visionFreeModels[0];
-            bestModel = geminiModel.id;
-        } else if (freeModels.length > 0) {
-            bestModel = freeModels[0].id;
-        }
-
-        sessionStorage.setItem('optimal_openrouter_model', bestModel);
-        return bestModel;
-    } catch (e) {
-        console.warn("モデル一覧の取得に失敗しました。デフォルトの無料モデルを使用します。", e);
-        return "google/gemini-2.5-flash-free"; // OpenRouter上のデフォルト
-    }
-  };
-
-  // UIへモデル名を表示する
-  window.displayLatestModel = async function() {
-    const key = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
-    const display = document.getElementById('currentModelDisplay');
-    if (!key) {
-        display.innerText = "使用AIモデル: APIキー未設定";
-        return;
-    }
-    display.innerText = "使用AIモデル: 最適な無料モデルを確認中...";
-    const modelName = await window.getOptimalFreeModel(key);
-    display.innerText = `使用AIモデル: ${modelName} (無料枠最適化)`;
-  }
-
   // ヘルプデータの定義
   const helpData = {
     record: { title: "📝 記録について", desc: "レシートや請求書をカメラで撮影してAIに自動入力させるか、手動で出費を記録する画面です。<br><br>※AIは自動で商品ごとの単価や税を計算し、適切なカテゴリに分類してくれます。カテゴリ設定は「設定」タブから変更可能です。" },
@@ -799,9 +743,9 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    // 以前のGeminiキー(AIza...)を誤って読み込まないよう修正
-    const savedKey = localStorage.getItem('openrouter_api_key');
-    if (savedKey && savedKey.startsWith('sk-or-')) {
+    // Gemini APIのキーを読み込むように戻す
+    const savedKey = localStorage.getItem('gemini_api_key');
+    if (savedKey) {
       document.getElementById('apiKey').value = savedKey;
     } else {
       document.getElementById('apiKey').value = '';
@@ -841,7 +785,6 @@
       window.loadUserData();
       window.migrateLocalToCloudIfNeeded(window.currentUser);
       window.showUpdateModalIfNeeded();
-      window.displayLatestModel(); // APIモデル確認
     } else {
       document.getElementById('authView').classList.remove('hidden');
       document.getElementById('appView').classList.add('hidden');
@@ -1074,14 +1017,9 @@
 
   window.saveApiKey = function() {
     const key = document.getElementById('apiKey').value.trim();
-    if (!key.startsWith('sk-or-')) {
-      alert("エラー: OpenRouterのAPIキーは「sk-or-」から始まります。正しいキーを入力してください。");
-      return;
-    }
-    localStorage.setItem('openrouter_api_key', key);
-    sessionStorage.removeItem('optimal_openrouter_model'); // APIキー変更時はキャッシュクリア
-    alert("OpenRouter APIキーを保存しました。");
-    window.displayLatestModel();
+    if (!key) return alert("APIキーを入力してください。");
+    localStorage.setItem('gemini_api_key', key);
+    alert("Gemini APIキーを保存しました。");
   };
 
   window.exportData = function() {
@@ -1621,7 +1559,7 @@
     const file = e.target?.files[0] || e.target;
     if (!file || !file.name) return;
 
-    const apiKey = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
+    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) { if(e.target.value) e.target.value = ''; return alert("APIキーを設定してください。"); }
     
     const loadingMsg = document.getElementById('loadingMsg');
@@ -1647,25 +1585,18 @@
         catInstructions = `自動分類はオフになっています。すべてのアイテムのcategoryを「${window.customCategories[0]}」に設定してください。`;
       }
 
-      // 最適な無料モデルを取得
-      const modelName = await window.getOptimalFreeModel(apiKey);
-
-      // OpenRouter API向けのリクエストペイロード作成
       const payload = {
-        model: modelName,
-        messages: [{
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
+        contents: [{
+          parts: [
+            { text: `
+              あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
 【重要ルール】
 1. 画像が該当する書類でない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
 2. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
 3. 内税・外税の厳格判定：
   - 「税込(内税)」の場合：税単独アイテムを作らず、商品価格(price)自体に含める。
   - 「税別(外税)」の場合：消費税額を（name: "外税(消費税)", unit_price: 0, qty: 1, price: 0, tax: 金額）として独立抽出。
-4. 【Webリサーチ機能】商品名が途切れている場合（例：カツドンベン）や、品名が不明瞭な場合は、Web検索やあなたの持つ広範な知識・Webリサーチ機能を活用して、妥当で完全な商品名（例：かつ丼弁当）を推測して補完してください。
+4. 【推測・補完機能】商品名が途切れている場合（例：カツドンベン）や、品名が不明瞭な場合は、あなたの持つ広範な一般的な知識・内部知識を活用して、最も妥当で完全な商品名（例：かつ丼弁当）を推測して補完してください。
 5. カテゴリ分類について:
 ${catInstructions}
 
@@ -1676,55 +1607,45 @@ ${catInstructions}
 絶対に思考プロセス、挨拶、説明を出力しないでください。出力は必ず波括弧 { で始まり、波括弧 } で終わる純粋なJSONテキストのみとしてください。`
             },
             {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64String}`
-              }
+              inline_data: { mime_type: "image/jpeg", data: base64String }
             }
           ]
         }],
-        plugins: [{ id: "web" }] // OpenRouterのWebリサーチ用プラグイン(サポートされている場合作動)
+        generationConfig: { responseMimeType: "application/json" }
       };
 
-      // CORSエラー対策として、不要なカスタムヘッダーを削除
+      // デフォルトは最新の gemini-3.7-flash を指定
+      let modelName = 'gemini-3.7-flash';
       let response;
       try {
-        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
           method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          }, 
+          headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify(payload)
         });
       } catch(fetchError) {
-        throw new Error("Failed to fetch: ネットワークエラーが発生しました。ブラウザの広告ブロッカーやセキュリティ拡張機能(Brave, uBlock等)がAPI通信をブロックしている可能性があります。無効にして再試行してください。");
+        throw new Error("ネットワークエラーが発生しました。");
       }
       
-      // 無料モデルがWeb検索プラグインに対応しておらず403になる場合の回避処理
-      if (response.status === 403 || response.status === 400) {
-        console.warn("プラグイン制限の可能性。Web検索をオフにして再試行します。");
-        delete payload.plugins;
-        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      // エラー時は自動で 3.6-flash へフォールバック
+      if (!response.ok) {
+        console.warn(`${modelName} でエラーが発生しました。gemini-3.6-flash にフォールバックします。`);
+        modelName = 'gemini-3.6-flash';
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
           method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          }, 
+          headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify(payload)
         });
-      }
-      
-      if (!response.ok) {
-        if (response.status === 403) throw new Error("403エラー: APIキーが無効です。「sk-or-」から始まる正しいキーを設定してください。");
-        const errText = await response.text();
-        throw new Error(`通信エラー (${response.status})。詳細: ${errText}`);
+        
+        if (!response.ok) {
+          throw new Error(`通信エラー (${response.status})。時間をおいて再試行してください。`);
+        }
       }
       
       const result = await response.json();
-      if (!result.choices || result.choices.length === 0) throw new Error("解析結果が空でした。");
+      if (!result.candidates || result.candidates.length === 0) throw new Error("解析結果が空でした。");
 
-      let jsonText = result.choices[0].message.content || "";
+      let jsonText = result.candidates[0].content?.parts[0]?.text || "";
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
       
       // JSONのパースエラーを防ぐための切り出し
@@ -1734,7 +1655,7 @@ ${catInstructions}
       if (startIdx !== -1 && endIdx !== -1) {
           jsonText = jsonText.substring(startIdx, endIdx + 1);
       } else {
-          console.error("AI Raw Response:", result.choices[0].message.content);
+          console.error("AI Raw Response:", result.candidates[0].content?.parts[0]?.text);
           throw new Error("AIがJSON形式で応答しませんでした。時間をおいて再試行するか、別の画像をお試しください。");
       }
       
@@ -2303,7 +2224,7 @@ ${catInstructions}
   }
 
   window.getExpertAIAdvice = async function() {
-    const apiKey = localStorage.getItem('openrouter_api_key') || document.getElementById('apiKey').value.trim();
+    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) return alert("APIキーが設定されていません。");
     const selectedMonth = document.getElementById('monthSelector').value;
     if(!selectedMonth) return alert("データがありません。");
@@ -2319,57 +2240,50 @@ ${catInstructions}
       blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += isExp ? (e.price + e.tax) : e.amount;
     });
 
-    const modelName = await window.getOptimalFreeModel(apiKey);
-
     const payload = {
-      model: modelName,
-      messages: [{
-        role: "user",
-        content: `あなたは優秀な経理責任者です。個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを生成してください。
+      contents: [{
+        parts: [{ text: `
+          あなたは優秀な経理責任者です。個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを生成してください。
 条件：10日ごとのペース配分への言及、具体的な改善・向上策の提示。
-【Webリサーチ機能】最新の経済状況や物価動向、一般的な節約術などをWeb検索機能でリサーチし、具体的なデータも交えてアドバイスに役立ててください。
+【推測・補完機能】最新の経済状況や一般的な節約術などのあなたの持つ広範な内部知識を活用し、具体的なデータも交えてアドバイスに役立ててください。
 対象月: ${selectedMonth} / 上旬: ¥${blockTotals[0]} / 中旬: ¥${blockTotals[1]} / 下旬: ¥${blockTotals[2]}
 データ: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
-      }],
-      plugins: [{ id: "web" }] // OpenRouterのWebリサーチ用プラグイン
+        }]
+      }]
     };
 
+    let modelName = 'gemini-3.7-flash';
+    let response;
     try {
-      let response;
-      try {
-        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          }, 
-          body: JSON.stringify(payload)
-        });
-      } catch(fetchError) {
-        throw new Error("Failed to fetch: ネットワークエラーが発生しました。ブラウザの広告ブロッカーやセキュリティ拡張機能がAPI通信をブロックしている可能性があります。");
-      }
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload)
+      });
+    } catch(fetchError) {
+      adviceElem.innerText = "ネットワークエラーが発生しました。";
+      return;
+    }
 
-      if (response.status === 403 || response.status === 400) {
-        delete payload.plugins;
-        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: 'POST', 
-          headers: { 
-            'Content-Type': 'application/json', 
-            'Authorization': `Bearer ${apiKey}`
-          }, 
-          body: JSON.stringify(payload)
-        });
-      }
-
+    if (!response.ok) {
+      modelName = 'gemini-3.6-flash';
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload)
+      });
       if (!response.ok) {
-        if(response.status === 403) throw new Error("APIキーが無効です。「sk-or-」から始まるキーを設定してください。");
-        throw new Error("APIエラー");
+        adviceElem.innerText = `分析に失敗しました。(${response.status})`;
+        return;
       }
+    }
+
+    try {
       const result = await response.json();
-      adviceElem.innerText = result.choices[0].message.content;
+      adviceElem.innerText = result.candidates[0].content.parts[0].text;
     } catch (error) { 
       console.error(error);
-      adviceElem.innerText = `分析に失敗しました。(${error.message})`; 
+      adviceElem.innerText = `分析結果の読み取りに失敗しました。`; 
     }
   };
 
