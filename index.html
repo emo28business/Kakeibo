@@ -514,6 +514,45 @@
     </div>
   </div>
 
+  <!-- 日付確認用モーダル (OCR後) -->
+  <div id="dateCheckModal" class="modal-overlay hidden" style="z-index: 2500;">
+    <div class="modal-content" style="max-height: 90vh;">
+      <h2 style="margin-bottom: 12px; color: var(--red-text);">⚠️ 日付の確認</h2>
+      <p style="font-size: 13px; color: #444; margin-bottom: 16px;">
+        現実の日付から7日以上離れている記録があります。認識エラーの可能性があるため、必要に応じて修正してください。
+      </p>
+      <div id="dateCheckList" style="overflow-y: auto; flex: 1; margin-bottom: 16px;"></div>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="skipDateCheckAndSave()" class="outline" style="flex: 1; border-color: #999; color: #666; font-size: 12px;">修正せず保存</button>
+        <button onclick="applyDateCheckAndSave()" style="flex: 1; font-size: 12px;">修正して保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 一括変更モーダル -->
+  <div id="bulkEditModal" class="modal-overlay hidden" style="z-index: 2000;">
+    <div class="modal-content">
+      <h2 style="margin-bottom: 16px;">一括変更 (日付・店名)</h2>
+      <p style="font-size: 12px; color: #666; margin-bottom: 12px;" id="bulkEditTargetDesc"></p>
+      <input type="hidden" id="bulkEditOriginalDate">
+      <input type="hidden" id="bulkEditOriginalStore">
+      
+      <label>変更後の日付 (空欄ならそのまま)</label>
+      <input type="date" id="bulkEditDate">
+      <label>変更後の店名 (空欄ならそのまま)</label>
+      <input type="text" id="bulkEditStore">
+      <label>変更後のカテゴリ (変更なしの場合は「---」)</label>
+      <select id="bulkEditCategory" style="margin-bottom: 0;">
+        <option value="">---</option>
+      </select>
+      
+      <div style="display: flex; gap: 10px; margin-top: 24px;">
+        <button onclick="closeBulkEditModal()" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
+        <button onclick="executeBulkEdit()" style="flex: 1;">一括更新</button>
+      </div>
+    </div>
+  </div>
+
 <script type="module">
   // ==========================================
   // Firebase SDK (v12.16.0) インポート
@@ -1672,7 +1711,12 @@ ${catInstructions}
       }
 
       if (parsedData.items && parsedData.items.length > 0) {
-        let addedCount = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+        
+        let needsCheck = false;
+        window.tempParsedItems = [];
+
         for (const item of parsedData.items) {
           const isTax = item.name === "外税(消費税)";
           let itemCategory = item.category;
@@ -1695,17 +1739,91 @@ ${catInstructions}
             memo: item.memo || "",
             isNecessary: isTax ? true : null
           };
-          await fsSaveExpense(expense);
-          addedCount++;
+          window.tempParsedItems.push(expense);
+
+          // 乖離チェック (7日以上)
+          const itemDate = new Date(expense.date);
+          if (!isNaN(itemDate)) {
+             itemDate.setHours(0,0,0,0);
+             const diffTime = Math.abs(today - itemDate);
+             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+             if (diffDays >= 7) {
+               needsCheck = true;
+             }
+          }
         }
-        alert(`画像を解析し、${addedCount}件の記録を家計簿に追加しました！`);
+
+        if (needsCheck) {
+            loadingMsg.classList.add('hidden');
+            if(e.target.value !== undefined) e.target.value = '';
+            window.showDateCheckModal();
+        } else {
+            await window.saveParsedItems(window.tempParsedItems);
+            loadingMsg.classList.add('hidden');
+            if(e.target.value !== undefined) e.target.value = '';
+        }
       } else {
         throw new Error("レシート・書類から商品を読み取れませんでした。");
       }
     } catch (error) { 
+      loadingMsg.classList.add('hidden'); 
+      if(e.target.value !== undefined) e.target.value = '';
       alert(`解析エラー: ${error.message}`); 
     }
-    finally { loadingMsg.classList.add('hidden'); if(e.target.value !== undefined) e.target.value = ''; }
+  };
+
+  // OCRパース結果を保存する共通関数
+  window.saveParsedItems = async function(items) {
+    let addedCount = 0;
+    for (const item of items) {
+      await fsSaveExpense(item);
+      addedCount++;
+    }
+    alert(`画像を解析し、${addedCount}件の記録を家計簿に追加しました！`);
+    window.tempParsedItems = [];
+  };
+
+  // 日付確認モーダルの表示
+  window.showDateCheckModal = function() {
+    const listDiv = document.getElementById('dateCheckList');
+    let html = '';
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    window.tempParsedItems.forEach((item, index) => {
+      const itemDate = new Date(item.date);
+      let diffDays = 0;
+      if (!isNaN(itemDate)) {
+        itemDate.setHours(0,0,0,0);
+        const diffTime = Math.abs(today - itemDate);
+        diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+      const warnStyle = diffDays >= 7 ? 'background: #fff0f0; border-left: 3px solid var(--red-text);' : '';
+
+      html += `
+        <div style="padding: 10px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 8px; ${warnStyle}">
+          <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">${item.name} <span style="font-weight:normal; font-size:12px; color:#666;">(¥${item.price})</span></div>
+          <label style="font-size: 11px;">日付:</label>
+          <input type="date" id="dateCheckInput_${index}" value="${item.date}" style="padding: 8px; margin-bottom: 0;">
+        </div>
+      `;
+    });
+    listDiv.innerHTML = html;
+    document.getElementById('dateCheckModal').classList.remove('hidden');
+  };
+
+  window.skipDateCheckAndSave = async function() {
+    document.getElementById('dateCheckModal').classList.add('hidden');
+    await window.saveParsedItems(window.tempParsedItems);
+  };
+
+  window.applyDateCheckAndSave = async function() {
+    window.tempParsedItems.forEach((item, index) => {
+      const newVal = document.getElementById(`dateCheckInput_${index}`).value;
+      if (newVal) item.date = newVal;
+    });
+    document.getElementById('dateCheckModal').classList.add('hidden');
+    await window.saveParsedItems(window.tempParsedItems);
   };
 
   window.saveExpense = async function() {
@@ -1830,6 +1948,63 @@ ${catInstructions}
     }
   };
 
+  // --- 長押し・一括変更機能 ---
+  let pressTimer = null;
+  window.startLongPress = function(date, store, event) {
+    pressTimer = window.setTimeout(() => {
+      pressTimer = null;
+      window.openBulkEditModal(date, store);
+    }, 600); // 600ms長押しで発火
+  };
+  window.cancelLongPress = function() {
+    if (pressTimer !== null) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+  };
+
+  window.openBulkEditModal = function(date, store) {
+    window.cancelLongPress();
+    document.getElementById('bulkEditOriginalDate').value = date;
+    document.getElementById('bulkEditOriginalStore').value = store;
+    document.getElementById('bulkEditTargetDesc').innerText = `対象: ${date} / ${store}`;
+    
+    document.getElementById('bulkEditDate').value = date;
+    document.getElementById('bulkEditStore').value = store;
+    
+    const catSelect = document.getElementById('bulkEditCategory');
+    catSelect.innerHTML = '<option value="">---</option>' + window.customCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    document.getElementById('bulkEditModal').classList.remove('hidden');
+  };
+
+  window.closeBulkEditModal = function() {
+    document.getElementById('bulkEditModal').classList.add('hidden');
+  };
+
+  window.executeBulkEdit = async function() {
+    const origDate = document.getElementById('bulkEditOriginalDate').value;
+    const origStore = document.getElementById('bulkEditOriginalStore').value;
+    
+    const newDate = document.getElementById('bulkEditDate').value;
+    const newStore = document.getElementById('bulkEditStore').value.trim();
+    const newCat = document.getElementById('bulkEditCategory').value;
+    
+    const targets = window.expenses.filter(e => e.date === origDate && e.store === origStore);
+    if (targets.length === 0) {
+      window.closeBulkEditModal();
+      return;
+    }
+    
+    for (const t of targets) {
+      if (newDate) t.date = newDate;
+      if (newStore) t.store = newStore;
+      if (newCat) t.category = newCat;
+      await fsSaveExpense(t);
+    }
+    window.closeBulkEditModal();
+  };
+
   window.updateHistoryTree = function() {
     const historyList = document.getElementById('historyList');
     if (window.expenses.length === 0) { historyList.innerHTML = '<p style="color:#666;">出費履歴がありません</p>'; return; }
@@ -1853,10 +2028,20 @@ ${catInstructions}
         const safeStore = store.replace(/'/g, "\\'").replace(/"/g, "&quot;");
         
         html += `<details open><summary class="tree-store-summary">
-          <span><span style="color:#e0e0e0;">▪</span> ${store} <span style="color:#666; margin-left:4px;">¥${storeTotal}</span></span>
+          <span style="cursor:pointer; user-select: none; -webkit-user-select: none;" 
+                onpointerdown="startLongPress('${date}', '${safeStore}', event)" 
+                onpointerup="cancelLongPress()" 
+                onpointerleave="cancelLongPress()" 
+                oncontextmenu="event.preventDefault(); openBulkEditModal('${date}', '${safeStore}'); return false;"
+                title="長押し・右クリックで一括変更">
+            <span style="color:#e0e0e0;">▪</span> ${store} <span style="color:#666; margin-left:4px;">¥${storeTotal}</span>
+          </span>
           <button class="outline" style="padding:4px 8px; font-size:10px; border-color:var(--pale-red-border); color:var(--red-text);" onclick="deleteStoreExpenses('${date}', '${safeStore}', event)">削除</button>
         </summary><div>`;
         
+        // 最新順（ID降順）にソートして表示
+        byDate[date][store].sort((a, b) => b.id.localeCompare(a.id));
+
         byDate[date][store].forEach(e => {
           let evalIcon = '<span style="color:#ccc;">ー</span>';
           if (e.isNecessary === true && e.name !== "外税(消費税)") evalIcon = '<span class="minimal-emoji" style="background:var(--pale-green); border:1px solid var(--pale-green-border); border-radius:4px; padding:2px 4px; font-size:10px;">👍</span>';
