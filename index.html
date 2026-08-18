@@ -292,6 +292,7 @@
     <div id="history" class="tab-content">
       <h2>出費履歴 <span class="help-icon" onclick="showHelp('history')">❓</span></h2>
       <p style="font-size: 12px; color: #666; margin-bottom: 12px;">タップして編集・削除が行えます。</p>
+      <input type="text" id="historySearchInput" placeholder="店名、商品名、カテゴリ等で検索..." oninput="window.updateHistoryTree()" style="margin-bottom: 16px;">
       <div id="historyList"></div>
     </div>
 
@@ -530,18 +531,33 @@
     </div>
   </div>
 
-  <!-- 日付確認用モーダル (OCR後) -->
-  <div id="dateCheckModal" class="modal-overlay hidden" style="z-index: 2500;">
-    <div class="modal-content" style="max-height: 90vh;">
-      <h2 style="margin-bottom: 12px; color: var(--red-text);">⚠️ 日付の確認</h2>
+  <!-- OCR解析結果の確認・修正用モーダル -->
+  <div id="ocrConfirmModal" class="modal-overlay hidden" style="z-index: 2500;">
+    <div class="modal-content" style="max-height: 90vh; width: 95%; max-width: 500px;">
+      <h2 style="margin-bottom: 12px; color: var(--primary);">📝 読み取り結果の確認</h2>
       <p style="font-size: 13px; color: #444; margin-bottom: 16px;">
-        現実の日付から7日以上離れている記録があります。認識エラーの可能性があるため、必要に応じて修正してください。
+        内容を確認し、必要に応じて修正してください。
       </p>
-      <div id="dateCheckList" style="overflow-y: auto; flex: 1; margin-bottom: 16px;"></div>
-      <div style="display: flex; gap: 10px;">
-        <button onclick="skipDateCheckAndSave()" class="outline" style="flex: 1; border-color: #999; color: #666; font-size: 12px;">修正せず保存</button>
-        <button onclick="applyDateCheckAndSave()" style="flex: 1; font-size: 12px;">一括修正して保存</button>
+      
+      <!-- レシート全体の設定 -->
+      <div style="background: #f0f0f0; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+        <label>日付 (一括変更)</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <input type="date" id="ocrBatchDate" style="margin-bottom: 0; flex: 1;">
+          <button onclick="document.getElementById('ocrBatchDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
+        </div>
+        <label>店名 (一括変更)</label>
+        <input type="text" id="ocrBatchStore" style="margin-bottom: 0;">
       </div>
+
+      <!-- 個別アイテムのリスト -->
+      <label>読み取った商品一覧</label>
+      <div id="ocrConfirmList" style="overflow-y: auto; flex: 1; margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; background: #fff;"></div>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <button onclick="applyOcrConfirmAndSave()" style="flex: 1;">この内容で保存</button>
+      </div>
+      <button onclick="discardOcrConfirm()" class="outline" style="width: 100%; border-color: var(--red-text); color: var(--red-text);">この認識結果を破棄</button>
     </div>
   </div>
 
@@ -1730,12 +1746,7 @@ ${catInstructions}
       }
 
       if (parsedData.items && parsedData.items.length > 0) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); 
-        
-        let needsCheck = false;
         window.tempParsedItems = [];
-
         for (const item of parsedData.items) {
           const isTax = item.name === "外税(消費税)";
           let itemCategory = item.category;
@@ -1759,28 +1770,10 @@ ${catInstructions}
             isNecessary: isTax ? true : null
           };
           window.tempParsedItems.push(expense);
-
-          // 乖離チェック (7日以上)
-          const itemDate = new Date(expense.date);
-          if (!isNaN(itemDate)) {
-             itemDate.setHours(0,0,0,0);
-             const diffTime = Math.abs(today - itemDate);
-             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-             if (diffDays >= 7) {
-               needsCheck = true;
-             }
-          }
         }
-
-        if (needsCheck) {
-            loadingMsg.classList.add('hidden');
-            if(e.target.value !== undefined) e.target.value = '';
-            window.showDateCheckModal();
-        } else {
-            await window.saveParsedItems(window.tempParsedItems);
-            loadingMsg.classList.add('hidden');
-            if(e.target.value !== undefined) e.target.value = '';
-        }
+        loadingMsg.classList.add('hidden');
+        if(e.target.value !== undefined) e.target.value = '';
+        window.showOcrConfirmModal();
       } else {
         throw new Error("レシート・書類から商品を読み取れませんでした。");
       }
@@ -1802,42 +1795,68 @@ ${catInstructions}
     window.tempParsedItems = [];
   };
 
-  // 日付確認モーダルの表示
-  window.showDateCheckModal = function() {
-    const listDiv = document.getElementById('dateCheckList');
-    let html = '<ul style="font-size: 12px; color: #444; padding-left: 20px; max-height: 150px; overflow-y: auto; margin-bottom:16px;">';
-    let suggestedDate = window.tempParsedItems.length > 0 ? window.tempParsedItems[0].date : new Date().toISOString().split('T')[0];
+  window.showOcrConfirmModal = function() {
+    const listDiv = document.getElementById('ocrConfirmList');
+    if (window.tempParsedItems.length === 0) return;
 
-    window.tempParsedItems.forEach((item) => {
-      html += `<li>${item.name} <span style="color:#666;">(¥${item.price})</span> - 認識日: <span style="font-weight:bold; color:var(--red-text);">${item.date}</span></li>`;
+    // ヘッダー部（全体日付・店名）の初期化
+    const firstItem = window.tempParsedItems[0];
+    document.getElementById('ocrBatchDate').value = firstItem.date || new Date().toISOString().split('T')[0];
+    document.getElementById('ocrBatchStore').value = firstItem.store || "";
+
+    let html = '';
+    window.tempParsedItems.forEach((item, index) => {
+      const isTax = item.name === "外税(消費税)";
+      
+      let itemCatOptions = window.customCategories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
+      if (!window.customCategories.includes(item.category)) {
+          itemCatOptions += `<option value="${item.category}" selected>${item.category} (旧)</option>`;
+      }
+
+      html += `
+        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #ccc;">
+          <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:bold; font-size:14px; color:var(--text-color);">¥${item.price} ${item.tax > 0 ? `<span style="font-size:11px;color:#666;">(税¥${item.tax})</span>` : ''}</span>
+            ${item.qty > 1 ? `<span style="font-size:12px; color:#666;">@¥${item.unit_price} × ${item.qty}</span>` : ''}
+          </div>
+          <input type="text" id="ocrItemName_${index}" value="${item.name.replace(/"/g, '&quot;')}" style="margin-bottom: 4px; padding: 6px; font-size: 13px;" ${isTax ? 'readonly style="background:#f0f0f0; color:#666;"' : ''}>
+          <select id="ocrItemCat_${index}" style="margin-bottom: 0; padding: 6px; font-size: 13px;" ${isTax ? 'disabled' : ''}>
+            ${itemCatOptions}
+          </select>
+        </div>
+      `;
     });
-    html += '</ul>';
-    
-    html += `
-      <label>修正後の日付 (レシート全体に適用)</label>
-      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <input type="date" id="batchDateCheckInput" value="${suggestedDate}" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('batchDateCheckInput').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">今日</button>
-      </div>
-    `;
     listDiv.innerHTML = html;
-    document.getElementById('dateCheckModal').classList.remove('hidden');
+    
+    document.getElementById('ocrConfirmModal').classList.remove('hidden');
   };
 
-  window.skipDateCheckAndSave = async function() {
-    document.getElementById('dateCheckModal').classList.add('hidden');
+  window.applyOcrConfirmAndSave = async function() {
+    const batchDate = document.getElementById('ocrBatchDate').value;
+    const batchStore = document.getElementById('ocrBatchStore').value.trim();
+
+    window.tempParsedItems.forEach((item, index) => {
+      if (batchDate) item.date = batchDate;
+      if (batchStore) item.store = batchStore;
+
+      const nameInput = document.getElementById(`ocrItemName_${index}`);
+      const catSelect = document.getElementById(`ocrItemCat_${index}`);
+      if (nameInput && !nameInput.readOnly) {
+          item.name = nameInput.value.trim() || item.name;
+      }
+      if (catSelect && !catSelect.disabled) {
+          item.category = catSelect.value;
+      }
+    });
+
+    document.getElementById('ocrConfirmModal').classList.add('hidden');
     await window.saveParsedItems(window.tempParsedItems);
   };
 
-  window.applyDateCheckAndSave = async function() {
-    const newVal = document.getElementById('batchDateCheckInput').value;
-    if (newVal) {
-      window.tempParsedItems.forEach((item) => {
-        item.date = newVal;
-      });
-    }
-    document.getElementById('dateCheckModal').classList.add('hidden');
-    await window.saveParsedItems(window.tempParsedItems);
+  window.discardOcrConfirm = function() {
+    document.getElementById('ocrConfirmModal').classList.add('hidden');
+    window.tempParsedItems = [];
+    alert("認識結果を破棄しました。");
   };
 
   window.saveExpense = async function() {
@@ -2013,7 +2032,7 @@ ${catInstructions}
     for (const t of targets) {
       if (newDate) t.date = newDate;
       if (newStore) t.store = newStore;
-      if (newCat) t.category = newCat;
+      if (newCat && newCat !== "") t.category = newCat;
       await fsSaveExpense(t);
     }
     window.closeBulkEditModal();
@@ -2021,10 +2040,23 @@ ${catInstructions}
 
   window.updateHistoryTree = function() {
     const historyList = document.getElementById('historyList');
-    if (window.expenses.length === 0) { historyList.innerHTML = '<p style="color:#666;">出費履歴がありません</p>'; return; }
+    const searchInput = document.getElementById('historySearchInput');
+    const searchWord = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+    let targetExpenses = window.expenses;
+    if (searchWord) {
+      targetExpenses = window.expenses.filter(e => 
+        e.name.toLowerCase().includes(searchWord) ||
+        e.store.toLowerCase().includes(searchWord) ||
+        e.category.toLowerCase().includes(searchWord) ||
+        (e.memo && e.memo.toLowerCase().includes(searchWord))
+      );
+    }
+
+    if (targetExpenses.length === 0) { historyList.innerHTML = '<p style="color:#666;">出費履歴がありません</p>'; return; }
 
     const byDate = {};
-    window.expenses.forEach(e => {
+    targetExpenses.forEach(e => {
       if (!byDate[e.date]) byDate[e.date] = {};
       if (!byDate[e.date][e.store]) byDate[e.date][e.store] = [];
       byDate[e.date][e.store].push(e);
