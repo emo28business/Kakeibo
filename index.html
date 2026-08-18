@@ -70,6 +70,7 @@
       white-space: nowrap;
       -webkit-overflow-scrolling: touch;
       align-items: flex-end;
+      position: relative;
     }
     .book-tabs::-webkit-scrollbar { display: none; }
     .book-tab {
@@ -81,10 +82,11 @@
       font-size: 13px;
       font-weight: bold;
       opacity: 0.7;
-      transition: all 0.2s;
+      transition: opacity 0.2s, background 0.2s, color 0.2s;
       user-select: none;
       -webkit-user-select: none;
       touch-action: pan-y;
+      position: relative;
     }
     .book-tab.active {
       background: var(--card-bg);
@@ -106,6 +108,7 @@
       transition: all 0.2s;
       font-size: 13px;
       margin-bottom: 0;
+      user-select: none;
     }
     .book-tab-add:hover { background: #e0e0e0; color: var(--text-color); border-color: transparent; }
 
@@ -237,19 +240,26 @@
       transform: rotate(45deg);
     }
 
-    /* 設定タブのドラッグ中のアイテム */
-    .settings-book-item.dragging {
-      opacity: 0.8;
-      background-color: #f9f9f9 !important;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transform: scale(1.02);
-      z-index: 100;
+    /* コンテキストメニュー */
+    #contextMenu {
+      position: fixed;
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       border-radius: 8px;
+      padding: 4px;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
     }
-    .drag-handle:active {
-      cursor: grabbing !important;
+    .context-menu-btn {
+      background: transparent; color: var(--text-color); text-align: left;
+      padding: 10px 12px; font-weight: normal; border-radius: 4px;
+      justify-content: flex-start; margin: 0; box-shadow: none; width: 100%;
+      border: none; cursor: pointer; transition: background 0.2s;
     }
+    .context-menu-btn:hover { background: #f0f0f0; color: var(--text-color); }
   </style>
 </head>
 <body>
@@ -271,6 +281,9 @@
   
   <!-- ブック切り替えタブ -->
   <div id="bookTabsContainer" class="book-tabs hidden"></div>
+
+  <!-- 汎用コンテキストメニュー -->
+  <div id="contextMenu" class="hidden"></div>
 
   <!-- 認証 (ログイン/新規登録) ビュー -->
   <div id="authView" class="container">
@@ -494,7 +507,7 @@
       <!-- ★ ブック管理 -->
       <div class="card">
         <h2>ブック(帳簿)の管理 <span class="help-icon" onclick="showHelp('book')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
-        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">家計、プライベートマネーなど、最大3つまで帳簿を分けて管理できます。<br>※ 三本線をつかんで並べ替えができます。</p>
+        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">家計、プライベートマネーなど、最大3つまで帳簿を分けて管理できます。<br>※ 右端の「≡」をつかんで並べ替えができます。</p>
         <div id="bookSettingList" style="margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #fff;">
         </div>
         <div style="display: flex; gap: 8px;">
@@ -506,7 +519,7 @@
       <!-- カテゴリ管理 -->
       <div class="card">
         <h2>分類(カテゴリ)の設定 <span class="help-icon" onclick="showHelp('settings')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
-        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">出費を分類するカテゴリを現在のブックに追加・削除できます。</p>
+        <p style="font-size: 12px; color: #888; margin-bottom: 16px;">出費を分類するカテゴリを現在のブックに追加・削除できます。<br>※ 右端の「≡」をつかんで並べ替えができます。</p>
         <div style="margin-bottom: 12px;">
           <label style="display:flex; align-items:center; gap:8px; font-weight:normal; font-size:14px; cursor:pointer; color:var(--text-color);">
             <input type="checkbox" id="aiAutoCategoryCheck" onchange="toggleAiAutoCategory()" style="width:auto; margin:0;">
@@ -684,26 +697,6 @@
     </div>
   </div>
 
-  <!-- ヘルプ用説明書モーダル -->
-  <div id="helpModal" class="modal-overlay hidden" style="z-index: 3000;">
-    <div class="modal-content">
-      <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--primary); display:flex; align-items:center; gap:6px;"></h2>
-      <p id="helpDescription" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 24px;"></p>
-      <button onclick="closeHelpModal()" style="width: 100%;">閉じる</button>
-    </div>
-  </div>
-
-  <!-- ブックのコンテキストメニュー (予測変換風) -->
-  <div id="bookContextMenu" class="hidden" style="position: fixed; background: #fff; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; padding: 4px; z-index: 5000; display: flex; flex-direction: column; min-width: 120px;">
-    <input type="hidden" id="bookEditMenuId">
-    <button onclick="executeBookMenuRename()" style="background: transparent; color: var(--text-color); text-align: left; padding: 10px 12px; font-weight: normal; border-radius: 4px; justify-content: flex-start; margin: 0; box-shadow: none;">
-      <span class="material-symbols-outlined" style="font-size:16px;">edit</span> 名前を変更
-    </button>
-    <button onclick="executeBookMenuDelete()" style="background: transparent; color: var(--red-text); text-align: left; padding: 10px 12px; font-weight: normal; border-radius: 4px; justify-content: flex-start; margin: 0; box-shadow: none;">
-      <span class="material-symbols-outlined" style="font-size:16px;">delete</span> 削除
-    </button>
-  </div>
-
   <!-- お知らせ用通知モーダル -->
   <div id="notificationModal" class="modal-overlay hidden" style="z-index: 4000;">
     <div class="modal-content" style="max-width: 350px;">
@@ -813,7 +806,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.18.v15"; // バージョン管理用 (お知らせ制御用)
+  const APP_VERSION = "2026.08.18.v16"; // バージョン管理用 (お知らせ制御用)
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -1111,9 +1104,8 @@
     
     document.getElementById('notificationContent').innerHTML = `
       <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-        <li><b>ポイント記録機能:</b> レシート読み取り時などに「ポイント利用額」を記録し、分析できるようになりました。</li>
-        <li><b>ブックタブの改善:</b> タブを長押しして名前変更や削除、スワイプで並び替えができるようになりました。</li>
-        <li><b>お知らせ機能:</b> ベルマークから新機能情報が確認できるようになりました。</li>
+        <li><b>デザイン・UI刷新:</b> 設定画面の削除ボタンなどをメニュー化し、スッキリとさせました。</li>
+        <li><b>ドラッグ並び替え:</b> ブックタブや設定画面の項目を自由に並び替えられるようになりました。</li>
       </ul>
     `;
     document.getElementById('notificationModal').classList.remove('hidden');
@@ -1165,16 +1157,253 @@
     }
   };
 
-  // 画面のどこかをクリックしたときにコンテキストメニューを閉じる処理
+  // --- 汎用コンテキストメニュー制御 ---
+  window.showContextMenu = function(targetElement, items) {
+    const menu = document.getElementById('contextMenu');
+    menu.innerHTML = items.map(item => `
+      <button class="context-menu-btn" onclick="${item.action}; closeContextMenu();" style="color: ${item.color || 'var(--text-color)'};">
+        <span class="material-symbols-outlined" style="font-size:16px;">${item.icon}</span> ${item.label}
+      </button>
+    `).join('');
+    
+    const rect = targetElement.getBoundingClientRect();
+    menu.style.left = Math.max(10, rect.left) + 'px';
+    menu.style.top = (rect.bottom + 5) + 'px';
+    menu.classList.remove('hidden');
+  };
+
+  window.closeContextMenu = function() {
+    const menu = document.getElementById('contextMenu');
+    if(menu) menu.classList.add('hidden');
+  };
+
   document.addEventListener('pointerdown', function(e) {
-    const menu = document.getElementById('bookContextMenu');
-    // メニューが表示されていて、クリック先がメニュー内でもブックタブでもない場合
+    const menu = document.getElementById('contextMenu');
     if (menu && !menu.classList.contains('hidden')) {
-      if (!menu.contains(e.target) && !e.target.closest('.book-tab')) {
+      if (!menu.contains(e.target) && !e.target.closest('[data-context-target="true"]')) {
         menu.classList.add('hidden');
       }
     }
   });
+
+
+  // --- ドラッグ＆ドロップ（Pointer Events実装） ---
+  window.dragState = {
+    active: false,
+    timer: null,
+    el: null,
+    clone: null,
+    type: '',
+    index: -1,
+    id: null,
+    startX: 0,
+    startY: 0,
+    shiftX: 0,
+    shiftY: 0
+  };
+
+  window.initDrag = function(e, type, index, id) {
+    if (e.button !== undefined && e.button !== 0) return; // 左クリックのみ
+
+    // 既存のタイマーをクリア
+    if (window.dragState.timer) clearTimeout(window.dragState.timer);
+
+    window.dragState = {
+      active: false,
+      el: e.currentTarget.closest('.settings-item') || e.currentTarget.closest('.book-tab'),
+      type: type,
+      index: index,
+      id: id,
+      startX: e.clientX || e.touches?.[0].clientX,
+      startY: e.clientY || e.touches?.[0].clientY,
+      shiftX: 0,
+      shiftY: 0
+    };
+
+    if (!window.dragState.el) return;
+
+    const rect = window.dragState.el.getBoundingClientRect();
+    window.dragState.shiftX = window.dragState.startX - rect.left;
+    window.dragState.shiftY = window.dragState.startY - rect.top;
+
+    window.dragState.timer = setTimeout(() => {
+      startCustomDrag();
+    }, 200); // 200ms長押しでドラッグ開始
+
+    document.addEventListener('pointermove', onCustomDragMove, {passive: false});
+    document.addEventListener('pointerup', onCustomDragEnd);
+  };
+
+  function startCustomDrag() {
+    const state = window.dragState;
+    if (!state.el) return;
+    state.active = true;
+    
+    // 他のメニューが開いていれば閉じる
+    window.closeContextMenu();
+    
+    const rect = state.el.getBoundingClientRect();
+    state.clone = state.el.cloneNode(true);
+    state.clone.style.position = 'fixed';
+    state.clone.style.left = rect.left + 'px';
+    state.clone.style.top = rect.top + 'px';
+    state.clone.style.width = rect.width + 'px';
+    state.clone.style.height = rect.height + 'px';
+    state.clone.style.zIndex = '9999';
+    state.clone.style.opacity = '0.9';
+    state.clone.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+    state.clone.style.pointerEvents = 'none';
+    state.clone.style.margin = '0';
+    state.clone.style.transform = 'scale(1.02)';
+    state.clone.style.transition = 'none';
+    document.body.appendChild(state.clone);
+
+    state.el.style.opacity = '0.2';
+  }
+
+  function onCustomDragMove(e) {
+    const state = window.dragState;
+    if (!state.el) return;
+
+    const currentX = e.clientX || e.touches?.[0].clientX;
+    const currentY = e.clientY || e.touches?.[0].clientY;
+
+    if (!state.active) {
+      const dx = Math.abs(currentX - state.startX);
+      const dy = Math.abs(currentY - state.startY);
+      if (dx > 8 || dy > 8) {
+        clearTimeout(state.timer);
+        startCustomDrag(); // 閾値を超えたらドラッグ開始
+      } else {
+        return;
+      }
+    }
+
+    e.preventDefault();
+
+    state.clone.style.left = (currentX - state.shiftX) + 'px';
+    state.clone.style.top = (currentY - state.shiftY) + 'px';
+
+    state.clone.style.display = 'none';
+    const elemBelow = document.elementFromPoint(currentX, currentY);
+    state.clone.style.display = '';
+
+    if (!elemBelow) return;
+
+    const dropTarget = elemBelow.closest(`[data-drag-type="${state.type}"]`);
+    if (dropTarget && dropTarget !== state.el) {
+      const container = state.el.parentNode;
+      const targetRect = dropTarget.getBoundingClientRect();
+      
+      let isNext = false;
+      if (state.type === 'bookTab') {
+        isNext = (currentX > targetRect.left + targetRect.width / 2);
+      } else {
+        isNext = (currentY > targetRect.top + targetRect.height / 2);
+      }
+      
+      if (isNext) {
+        container.insertBefore(state.el, dropTarget.nextSibling);
+      } else {
+        container.insertBefore(state.el, dropTarget);
+      }
+    }
+  }
+
+  function onCustomDragEnd(e) {
+    const state = window.dragState;
+    clearTimeout(state.timer);
+    document.removeEventListener('pointermove', onCustomDragMove);
+    document.removeEventListener('pointerup', onCustomDragEnd);
+
+    if (state.active) {
+      if (state.clone) state.clone.remove();
+      if (state.el) state.el.style.opacity = '1';
+      applyReorderFromDOM(state.type);
+    } else {
+      // ドラッグせずに離した場合はタップとして扱う
+      if (state.type === 'bookTab') {
+        handleCustomTap(state.type, state.index, state.id, e);
+      }
+    }
+    window.dragState = { active: false, el: null };
+  }
+
+  function applyReorderFromDOM(type) {
+    if (type === 'bookTab' || type === 'bookSetting') {
+      const container = type === 'bookTab' ? document.getElementById('bookTabsContainer') : document.getElementById('bookSettingList');
+      const newOrderIds = Array.from(container.querySelectorAll('[data-drag-id]')).map(el => el.getAttribute('data-drag-id'));
+      
+      const newBooks = [];
+      newOrderIds.forEach(id => {
+        const b = window.books.find(x => x.id === id);
+        if (b) newBooks.push(b);
+      });
+      if (newBooks.length === window.books.length) {
+        window.books = newBooks;
+        window.saveBooks();
+      }
+    } else if (type === 'categorySetting') {
+      const container = document.getElementById('categorySettingList');
+      const newCats = Array.from(container.querySelectorAll('[data-cat-name]')).map(el => el.getAttribute('data-cat-name'));
+      if (newCats.length === window.userCategories.length) {
+        window.userCategories = newCats;
+        window.saveUserSettings();
+      }
+    }
+  }
+
+  function handleCustomTap(type, index, id, e) {
+    if (type === 'bookTab') {
+      if (id === window.currentBookId) {
+        window.showContextMenu(window.dragState.el, [
+          { label: '名前を変更', icon: 'edit', action: `promptRenameBook('${id}')` },
+          { label: '削除', icon: 'delete', color: 'var(--red-text)', action: `confirmDeleteBook('${id}')` }
+        ]);
+      } else {
+        window.switchBook(id);
+      }
+    }
+  }
+
+  window.handleSettingItemTap = function(e, type, idOrName) {
+    if (type === 'book') {
+      window.showContextMenu(e.currentTarget, [
+        { label: '名前を変更', icon: 'edit', action: `promptRenameBook('${idOrName}')` },
+        { label: '削除', icon: 'delete', color: 'var(--red-text)', action: `confirmDeleteBook('${idOrName}')` }
+      ]);
+    } else if (type === 'category') {
+      window.showContextMenu(e.currentTarget, [
+        { label: '削除', icon: 'delete', color: 'var(--red-text)', action: `confirmDeleteCategory('${idOrName}')` }
+      ]);
+    }
+  };
+
+  // --- ヘルパー関数 ---
+  window.promptRenameBook = function(id) {
+    const book = window.books.find(b => b.id === id);
+    if (book) {
+      const newName = prompt("新しいブック名を入力してください", book.name);
+      if(newName && newName.trim()) {
+        window.renameBook(id, newName);
+      }
+    }
+  };
+
+  window.confirmDeleteBook = function(id) {
+    if (id === 'default') {
+      alert("基本ブックは削除できません。");
+      return;
+    }
+    window.deleteBook(id);
+  };
+
+  window.confirmDeleteCategory = function(catName) {
+    const index = window.userCategories.indexOf(catName);
+    if (index > -1) {
+      window.deleteCustomCategory(index);
+    }
+  };
 
 
   // --- ブック管理ロジック ---
@@ -1219,17 +1448,9 @@
     
     let html = window.books.map((b, index) => `
       <div class="book-tab ${b.id === window.currentBookId ? 'active' : ''}" 
-           onclick="switchBook('${b.id}')"
-           onpointerdown="startBookPointerDown('${b.id}', event)"
-           onpointermove="handleBookPointerMove(event)"
-           onpointerup="cancelBookPointerUp()"
-           onpointerleave="cancelBookPointerUp()"
-           oncontextmenu="event.preventDefault(); openBookContextMenu('${b.id}', this); return false;"
-           draggable="true"
-           ondragstart="handleBookDragStart(event, ${index})"
-           ondragover="handleBookDragOver(event)"
-           ondrop="handleBookDrop(event, ${index})"
-           ondragend="handleBookDragEnd(event)">
+           data-drag-type="bookTab" data-drag-index="${index}" data-drag-id="${b.id}" data-context-target="true"
+           onpointerdown="initDrag(event, 'bookTab', ${index}, '${b.id}')"
+           style="touch-action: none;">
         ${b.name}
       </div>
     `).join('');
@@ -1243,102 +1464,6 @@
       `;
     }
     container.innerHTML = html;
-  };
-
-  let bookPressTimer = null;
-  let bookStartX = 0, bookStartY = 0;
-  let isDraggingBook = false;
-
-  window.startBookPointerDown = function(id, event) {
-    if(event.button === 2) return; // 右クリック時は無視
-    bookStartX = event.clientX;
-    bookStartY = event.clientY;
-    isDraggingBook = false;
-
-    bookPressTimer = window.setTimeout(() => {
-      bookPressTimer = null;
-      if (!isDraggingBook) {
-        window.openBookContextMenu(id, event.target);
-      }
-    }, 300);
-  };
-  
-  window.handleBookPointerMove = function(event) {
-    if (bookPressTimer) {
-      const dx = Math.abs(event.clientX - bookStartX);
-      const dy = Math.abs(event.clientY - bookStartY);
-      if (dx > 5 || dy > 5) {
-        clearTimeout(bookPressTimer);
-        bookPressTimer = null;
-        isDraggingBook = true;
-      }
-    }
-  };
-
-  window.cancelBookPointerUp = function() {
-    if (bookPressTimer !== null) {
-      clearTimeout(bookPressTimer);
-      bookPressTimer = null;
-    }
-  };
-
-  window.openBookContextMenu = function(id, targetElement) {
-    window.cancelBookPointerUp();
-    const book = window.books.find(b => b.id === id);
-    if(!book) return;
-    
-    document.getElementById('bookEditMenuId').value = id;
-    
-    const rect = targetElement.getBoundingClientRect();
-    const menu = document.getElementById('bookContextMenu');
-    menu.style.left = rect.left + 'px';
-    menu.style.top = (rect.bottom + 5) + 'px';
-    menu.classList.remove('hidden');
-  };
-
-  window.closeBookContextMenu = function() {
-    document.getElementById('bookContextMenu').classList.add('hidden');
-  };
-
-  window.executeBookMenuRename = function() {
-    const id = document.getElementById('bookEditMenuId').value;
-    const book = window.books.find(b => b.id === id);
-    if(book) {
-      const newName = prompt("新しいブック名を入力してください", book.name);
-      if(newName && newName.trim()) {
-        window.renameBook(id, newName);
-      }
-    }
-    window.closeBookContextMenu();
-  };
-
-  window.executeBookMenuDelete = function() {
-    const id = document.getElementById('bookEditMenuId').value;
-    window.deleteBook(id);
-    window.closeBookContextMenu();
-  };
-
-  let draggedBookIndex = null;
-  window.handleBookDragStart = function(e, index) {
-    draggedBookIndex = index;
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => e.target.style.opacity = '0.5', 0);
-  };
-  window.handleBookDragOver = function(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-  window.handleBookDrop = function(e, index) {
-    e.preventDefault();
-    if (draggedBookIndex !== null && draggedBookIndex !== index) {
-      const item = window.books.splice(draggedBookIndex, 1)[0];
-      window.books.splice(index, 0, item);
-      window.saveBooks();
-    }
-  };
-  window.handleBookDragEnd = function(e) {
-    e.target.style.opacity = '';
-    draggedBookIndex = null;
   };
 
   window.promptAddBook = function() {
@@ -1357,20 +1482,16 @@
     const list = document.getElementById('bookSettingList');
     if(!list) return;
     list.innerHTML = window.books.map((b, i) => `
-      <div class="settings-book-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:${i === window.books.length - 1 ? 'none' : '1px solid var(--border-color)'}; transition: all 0.2s; background: #fff;"
-           draggable="true"
-           ondragstart="handleSettingsDragStart(event, ${i})"
-           ondragover="handleSettingsDragOver(event)"
-           ondrop="handleSettingsDrop(event, ${i})"
-           ondragend="handleSettingsDragEnd(event)">
-        <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+      <div class="settings-item" data-drag-type="bookSetting" data-drag-index="${i}" data-drag-id="${b.id}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:${i === window.books.length - 1 ? 'none' : '1px solid var(--border-color)'}; background: #fff;">
+        <div style="flex:1; cursor:pointer; padding: 4px 0;" data-context-target="true" onclick="handleSettingItemTap(event, 'book', '${b.id}')">
           ${b.id === 'default' 
-            ? `<span style="font-size:14px; color:var(--primary); font-weight:bold;">${b.name} <span style="font-size:11px;color:#999;font-weight:normal;">(基本ブック)</span></span>` 
-            : `<input type="text" value="${b.name}" onchange="renameBook('${b.id}', this.value)" style="margin-bottom:0; padding:6px; flex:1; font-size:14px;">
-               <button class="outline" style="padding:4px 8px; font-size:12px; border-color:var(--red-text); color:var(--red-text);" onclick="deleteBook('${b.id}')">削除</button>`
+            ? `<span style="font-size:14px; color:var(--primary); font-weight:bold;">${b.name} <span style="font-size:11px;color:#999;font-weight:normal;">(基本)</span></span>` 
+            : `<span style="font-size:14px;">${b.name}</span>`
           }
         </div>
-        <span class="material-symbols-outlined drag-handle" style="cursor: grab; color: #bbb; margin-left: 8px;">drag_indicator</span>
+        <span class="material-symbols-outlined drag-handle" 
+              onpointerdown="initDrag(event, 'bookSetting', ${i}, '${b.id}')"
+              style="touch-action: none; cursor: grab; color: #bbb; padding: 4px;">drag_handle</span>
       </div>
     `).join('');
     
@@ -1385,29 +1506,6 @@
       addInput.disabled = false;
       addInput.placeholder = "新しいブック名";
     }
-  };
-
-  let draggedSettingsIndex = null;
-  window.handleSettingsDragStart = function(e, index) {
-    draggedSettingsIndex = index;
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => e.target.classList.add('dragging'), 0);
-  };
-  window.handleSettingsDragOver = function(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-  window.handleSettingsDrop = function(e, index) {
-    e.preventDefault();
-    if (draggedSettingsIndex !== null && draggedSettingsIndex !== index) {
-      const item = window.books.splice(draggedSettingsIndex, 1)[0];
-      window.books.splice(index, 0, item);
-      window.saveBooks();
-    }
-  };
-  window.handleSettingsDragEnd = function(e) {
-    e.target.classList.remove('dragging');
-    draggedSettingsIndex = null;
   };
 
   window.addBook = function() {
@@ -1499,9 +1597,13 @@
     const list = document.getElementById('categorySettingList');
     if (!list) return;
     list.innerHTML = window.userCategories.map((cat, index) => `
-      <li style="display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--border-color); background:#fff;">
-        <span>${cat}</span>
-        <button class="outline" style="padding:2px 8px; font-size:12px; border-color:var(--red-text); color:var(--red-text);" onclick="deleteCustomCategory(${index})">削除</button>
+      <li class="settings-item" data-drag-type="categorySetting" data-drag-index="${index}" data-cat-name="${cat}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid var(--border-color); background:#fff;">
+        <div style="flex:1; cursor:pointer; padding: 4px 0;" data-context-target="true" onclick="handleSettingItemTap(event, 'category', '${cat}')">
+          <span style="font-size:14px;">${cat}</span>
+        </div>
+        <span class="material-symbols-outlined drag-handle" 
+              onpointerdown="initDrag(event, 'categorySetting', ${index}, '${cat}')"
+              style="touch-action: none; cursor: grab; color: #bbb; padding: 4px;">drag_handle</span>
       </li>
     `).join('');
   };
