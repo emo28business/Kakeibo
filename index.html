@@ -507,7 +507,7 @@
         <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
           <li><b>OpenRouter API対応:</b> APIをOpenRouterに変更し、最適化された画像対応の無料枠モデルを自動で選択・利用する機能を導入しました。</li>
           <li><b>Webリサーチ機能の追加:</b> Web検索を自動で行い、途切れた商品名の推測精度や、分析タブでのアドバイスの質が大幅に向上しました。</li>
-          <li><b>カメラ起動の改善・カテゴリのカスタマイズ機能</b> 等は引き続きご利用いただけます。</li>
+          <li><b>通信安定性の向上:</b> 特定のブラウザ環境で発生していたネットワークエラー（Failed to fetch）を解消しました。</li>
         </ul>
       </div>
       <button onclick="closeUpdateModal()" style="width: 100%;">確認しました</button>
@@ -535,7 +535,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.08.17.v9"; // バージョン管理用
+  const APP_VERSION = "2026.08.17.v10"; // バージョン管理用
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -1595,7 +1595,8 @@
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const max_size = 800;
+          // 通信安定化のため、最大サイズを少し小さめに調整
+          const max_size = 600;
           let width = img.width;
           let height = img.height;
 
@@ -1610,7 +1611,7 @@
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
+          resolve(canvas.toDataURL('image/jpeg', 0.7)); // 圧縮率を0.7に変更
         };
       };
     });
@@ -1685,16 +1686,20 @@ ${catInstructions}
         plugins: [{ id: "web" }] // OpenRouterのWebリサーチ用プラグイン(サポートされている場合作動)
       };
 
-      let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: 'POST', 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': window.location.href, // OpenRouter推奨ヘッダ
-          'X-Title': 'Kakeibo Cloud Sync'
-        }, 
-        body: JSON.stringify(payload)
-      });
+      // CORSエラー対策として、不要なカスタムヘッダーを削除
+      let response;
+      try {
+        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          }, 
+          body: JSON.stringify(payload)
+        });
+      } catch(fetchError) {
+        throw new Error("Failed to fetch: ネットワークエラーが発生しました。ブラウザの広告ブロッカーやセキュリティ拡張機能(Brave, uBlock等)がAPI通信をブロックしている可能性があります。無効にして再試行してください。");
+      }
       
       // 無料モデルがWeb検索プラグインに対応しておらず403になる場合の回避処理
       if (response.status === 403 || response.status === 400) {
@@ -1704,16 +1709,14 @@ ${catInstructions}
           method: 'POST', 
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': window.location.href,
-            'X-Title': 'Kakeibo Cloud Sync'
+            'Authorization': `Bearer ${apiKey}`
           }, 
           body: JSON.stringify(payload)
         });
       }
       
       if (!response.ok) {
-        if (response.status === 403) throw new Error("403エラー: APIキーが無効です。「sk-or-v1-」から始まる正しいキーを設定してください。");
+        if (response.status === 403) throw new Error("403エラー: APIキーが無効です。「sk-or-」から始まる正しいキーを設定してください。");
         const errText = await response.text();
         throw new Error(`通信エラー (${response.status})。詳細: ${errText}`);
       }
@@ -2332,26 +2335,34 @@ ${catInstructions}
     };
 
     try {
-      let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: 'POST', 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Kakeibo Cloud Sync'
-        }, 
-        body: JSON.stringify(payload)
-      });
+      let response;
+      try {
+        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          }, 
+          body: JSON.stringify(payload)
+        });
+      } catch(fetchError) {
+        throw new Error("Failed to fetch: ネットワークエラーが発生しました。ブラウザの広告ブロッカーやセキュリティ拡張機能がAPI通信をブロックしている可能性があります。");
+      }
 
       if (response.status === 403 || response.status === 400) {
         delete payload.plugins;
         response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Kakeibo Cloud Sync' }, body: JSON.stringify(payload)
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${apiKey}`
+          }, 
+          body: JSON.stringify(payload)
         });
       }
 
       if (!response.ok) {
-        if(response.status === 403) throw new Error("APIキーが無効です。「sk-or-v1-」から始まるキーを設定してください。");
+        if(response.status === 403) throw new Error("APIキーが無効です。「sk-or-」から始まるキーを設定してください。");
         throw new Error("APIエラー");
       }
       const result = await response.json();
