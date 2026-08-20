@@ -6,22 +6,23 @@
   <title>家計簿 - Cloud Sync</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* モノトーンベース + 淡いパステルカラー */
+    /* 明るすぎない淡いミニマルカラー ＋ 輪郭(コントゥア)デザイン */
     :root {
-      --bg-color: #ffffff;
-      --text-color: #111111;
-      --border-color: #e0e0e0;
-      --primary: #000000;
-      --primary-hover: #333333;
+      --bg-color: #f4f5f4; /* 目に優しいごくわずかなグレー */
+      --text-color: #3a403d; /* 真っ黒ではない柔らかなダークグレー */
+      --border-color: #d1d6d3; /* 輪郭をはっきりさせるライン */
+      --primary: #5e6964; /* メインカラー（くすんだスレートグレー） */
+      --primary-hover: #48524d;
       --card-bg: #ffffff;
       
-      --pale-green: #e8f5e9;
-      --pale-green-border: #c8e6c9;
-      --green-text: #2e7d32;
+      /* 整理ボタン等の色（ダスティな淡い色味） */
+      --pale-green: #f0f4f1;
+      --pale-green-border: #a8b8aa;
+      --green-text: #4a5e4d;
       
-      --pale-red: #ffebee;
-      --pale-red-border: #ffcdd2;
-      --red-text: #c62828;
+      --pale-red: #f7f1f1;
+      --pale-red-border: #c4a9a9;
+      --red-text: #784f4f;
     }
     body {
       font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -41,92 +42,92 @@
     h1, h2, h3 { margin: 0; font-weight: 600; color: var(--text-color); }
     h1 { font-size: 20px; display: flex; align-items: center; gap: 8px;}
     .cloud-badge { font-size: 10px; background: var(--pale-green); color: var(--green-text); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--pale-green-border); font-weight: normal;}
-    .local-badge { font-size: 10px; background: #f0f0f0; color: #666; padding: 2px 6px; border-radius: 4px; border: 1px solid #ccc; font-weight: normal;}
+    .local-badge { font-size: 10px; background: #ffffff; color: var(--text-color); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-weight: normal;}
     h2 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center;}
     .container { padding: 20px; max-width: 600px; margin: 0 auto; }
     
     button {
-      background: var(--primary); color: #fff; border: none;
-      padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+      background: var(--primary); color: #fff; border: 1px solid var(--primary);
+      padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s;
     }
     button:hover { background: var(--primary-hover); }
-    button.outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-    button.outline:hover { background: #f0f0f0; color: var(--primary); }
+    button.outline { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+    button.outline:hover { background: #f0f2f1; }
     
     input[type="text"], input[type="password"], input[type="date"], input[type="number"], select {
       width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid var(--border-color);
-      border-radius: 8px; box-sizing: border-box; font-size: 14px; background: #fff;
+      border-radius: 6px; box-sizing: border-box; font-size: 14px; background: #fff;
       color: var(--text-color);
     }
     label { font-size: 12px; color: #666; margin-bottom: 4px; display: block; font-weight: bold; }
     
-    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    /* カードはシャドウを消し、ボーダーで輪郭を強調 */
+    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: none; }
     
     .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
     .tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 14px; color: #666; white-space: nowrap; }
-    .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: bold; }
+    .tab { padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 14px; color: #777; white-space: nowrap; }
+    .tab.active { border-bottom-color: var(--primary); color: var(--text-color); font-weight: bold; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .hidden { display: none !important; }
 
     .minimal-emoji {
-      display: inline-block; filter: grayscale(20%) contrast(1.1);
+      display: inline-block; filter: grayscale(15%) contrast(1.1);
       font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
     }
 
-    /* ヘルプアイコン */
     .help-icon {
-      font-size: 14px; cursor: pointer; color: #666; margin-left: 8px;
+      font-size: 14px; cursor: pointer; color: var(--text-color); margin-left: 8px;
       display: inline-flex; align-items: center; justify-content: center;
-      width: 22px; height: 22px; border-radius: 50%; background: #f0f0f0;
-      font-weight: normal; border: 1px solid #ccc;
+      width: 22px; height: 22px; border-radius: 50%; background: #ffffff;
+      font-weight: normal; border: 1px solid var(--border-color);
     }
-    .help-icon:hover { background: #e0e0e0; }
+    .help-icon:hover { background: #f0f2f1; }
 
     .file-upload-btn {
       position: relative; overflow: hidden;
       display: flex; align-items: center; justify-content: center;
-      background: var(--primary); color: #fff; padding: 14px; border-radius: 8px;
-      font-weight: bold; cursor: pointer; margin-bottom: 10px; text-align: center; gap: 8px;
+      background: var(--primary); color: #fff; padding: 14px; border-radius: 6px;
+      font-weight: bold; cursor: pointer; margin-bottom: 10px; text-align: center; gap: 8px; border: 1px solid var(--primary);
     }
     .file-upload-btn:hover { background: var(--primary-hover); }
-    .file-upload-btn.outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
-    .file-upload-btn.outline:hover { background: #f0f0f0; color: var(--primary); }
+    .file-upload-btn.outline { background: #fff; color: var(--text-color); border: 1px solid var(--border-color); }
+    .file-upload-btn.outline:hover { background: #f0f2f1; }
     .file-upload-btn input[type="file"] {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       opacity: 0; cursor: pointer;
     }
 
     .swipe-container {
-      position: relative; background: #f9f9f9; border-radius: 12px; padding: 30px; text-align: center;
+      position: relative; background: #ffffff; border-radius: 8px; padding: 30px; text-align: center;
       margin-bottom: 24px; min-height: 150px; display: flex; flex-direction: column; justify-content: center;
       border: 1px solid var(--border-color);
     }
     .swipe-actions { display: flex; justify-content: center; gap: 16px; margin-top: 20px; }
     
-    .btn-no { flex: 1; font-size: 32px; background: var(--pale-red); border: 1px solid var(--pale-red-border); display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 12px;}
-    .btn-yes { flex: 1; font-size: 32px; background: var(--pale-green); border: 1px solid var(--pale-green-border); display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 12px;}
-    .price-text { font-size: 28px; font-weight: bold; margin: 12px 0; color: var(--primary); }
+    .btn-no { flex: 1; font-size: 32px; background: var(--pale-red); border: 1px solid var(--pale-red-border); display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 8px; color: var(--red-text);}
+    .btn-yes { flex: 1; font-size: 32px; background: var(--pale-green); border: 1px solid var(--pale-green-border); display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 8px; color: var(--green-text);}
+    .price-text { font-size: 28px; font-weight: bold; margin: 12px 0; color: var(--text-color); }
 
     details { margin-bottom: 8px; }
     summary {
-      cursor: pointer; padding: 12px; background: #f9f9f9; border-radius: 8px; font-weight: bold;
+      cursor: pointer; padding: 12px; background: #ffffff; border-radius: 6px; font-weight: bold;
       list-style: none; display: flex; justify-content: space-between; border: 1px solid var(--border-color);
       color: var(--text-color); align-items: center;
     }
     summary::-webkit-details-marker { display: none; }
     .tree-store-summary { background: #fff; border: none; border-bottom: 1px dashed var(--border-color); border-radius: 0; padding: 10px 12px; }
     .history-item {
-      padding: 12px; border-bottom: 1px solid #f0f0f0; margin-left: 16px; cursor: pointer;
+      padding: 12px; border-bottom: 1px solid #f0f2f1; margin-left: 16px; cursor: pointer;
       display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;
     }
-    .history-item:hover { background: #f9f9f9; }
+    .history-item:hover { background: #f0f2f1; }
     .history-item:last-child { border-bottom: none; }
 
     .chart-legend { margin-top: 20px; list-style: none; padding: 0; }
     .chart-legend li { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 14px; cursor: pointer; transition: background 0.2s; border-radius: 4px; }
-    .chart-legend li:hover { background: #f0f0f0; }
+    .chart-legend li:hover { background: #f0f2f1; }
     .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
     .modal-overlay {
@@ -134,19 +135,19 @@
       background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;
     }
     .modal-content {
-      background: var(--bg-color); width: 90%; max-width: 400px; padding: 24px; border-radius: 16px;
+      background: var(--bg-color); width: 90%; max-width: 400px; padding: 24px; border-radius: 8px;
       max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color); display: flex; flex-direction: column;
     }
     
     .memo-badge {
-      display: inline-block; background: #f0f0f0; color: #666; font-size: 11px;
-      padding: 2px 6px; border-radius: 4px; margin-top: 4px;
+      display: inline-block; background: #ffffff; color: var(--text-color); font-size: 11px;
+      padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 4px;
     }
 
     .toggle-group { display: flex; margin-bottom: 16px; }
     .toggle-group button { flex: 1; border-radius: 0; }
-    .toggle-group button:first-child { border-radius: 8px 0 0 8px; border-right: none; }
-    .toggle-group button:last-child { border-radius: 0 8px 8px 0; }
+    .toggle-group button:first-child { border-radius: 6px 0 0 6px; border-right: none; }
+    .toggle-group button:last-child { border-radius: 0 6px 6px 0; }
   </style>
 </head>
 <body>
@@ -154,7 +155,7 @@
   <header>
     <h1>家計簿 <span id="syncStatusBadge" class="local-badge">Local</span></h1>
     <div id="headerAuthInfo" class="hidden" style="display: flex; align-items: center; gap: 12px;">
-      <span style="font-size: 14px; font-weight: bold; color: var(--primary);" id="displayUserId"></span>
+      <span style="font-size: 14px; font-weight: bold; color: var(--text-color);" id="displayUserId"></span>
       <button class="outline" style="padding: 6px 12px; font-size: 12px;" onclick="logout()">ログアウト</button>
     </div>
   </header>
@@ -168,7 +169,7 @@
       <label>PINパスワード (数字4桁)</label>
       <input type="password" id="authPin" placeholder="1234" maxlength="4" pattern="\d{4}">
       
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-weight: normal; cursor: pointer; font-size: 14px; color: #333;">
+      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-weight: normal; cursor: pointer; font-size: 14px; color: var(--text-color);">
         <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;" checked>
         ログイン情報を保存する
       </label>
@@ -197,27 +198,27 @@
 
     <!-- 1. 記録タブ (出費) -->
     <div id="record" class="tab-content active">
-      <div class="card" style="background: #f9f9f9;">
+      <div class="card" style="background: #ffffff;">
         <label>Gemini API Key</label>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="apiKey" placeholder="APIキーを入力" style="margin-bottom: 0;">
           <button onclick="saveApiKey()">保存</button>
         </div>
         <div style="margin-top: 10px; text-align: right;">
-          <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #1a73e8; text-decoration: underline;">APIキーの発行・導入の仕方はこちら</a>
+          <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #5e6964; text-decoration: underline;">APIキーの発行・導入の仕方はこちら</a>
         </div>
       </div>
 
       <div class="card">
         <h2>レシートを読み取る <span class="help-icon" onclick="showHelp('record')">❓</span></h2>
-        <button onclick="openCameraModal()" class="file-upload-btn" style="width: 100%; border: none; font-size: 14px;">
+        <button onclick="openCameraModal()" class="file-upload-btn" style="width: 100%;">
           <span class="minimal-emoji">📷</span> カメラを起動して撮影
         </button>
         <label class="file-upload-btn outline">
           <span class="minimal-emoji">🖼️</span> ギャラリーから1枚選択
           <input type="file" id="galleryInput" accept="image/*">
         </label>
-        <p id="loadingMsg" class="hidden" style="color: var(--primary); font-size: 14px; font-weight: bold; text-align: center; margin-top: 16px;">AIが解析中...</p>
+        <p id="loadingMsg" class="hidden" style="color: var(--text-color); font-size: 14px; font-weight: bold; text-align: center; margin-top: 16px;">AIが解析中...</p>
       </div>
 
       <div class="card" id="manualForm">
@@ -305,7 +306,7 @@
       <!-- 評価の割合表示 -->
       <div class="card hidden" id="evaluationCard">
         <h2 style="margin-bottom: 8px;">出費の振り返り割合</h2>
-        <div id="evaluationStats" style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+        <div id="evaluationStats" style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; padding:12px; border-radius:6px; border:1px solid var(--border-color);">
         </div>
       </div>
 
@@ -315,7 +316,7 @@
         <ul id="tenDaysLegend" class="chart-legend"></ul>
       </div>
 
-      <!-- 月次推移グラフ -->
+      <!-- 一年間の推移グラフ -->
       <div class="card">
         <h2 id="trendChartTitle">一年間の推移 (出費項目別)</h2>
         <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px;">
@@ -334,12 +335,12 @@
         </div>
       </div>
       
-      <div class="card" style="background: #1a1a1a; color: #fff; border:none;">
+      <div class="card" style="background: #3a403d; color: #fff; border:none;">
         <div class="chart-header">
           <h2 style="margin: 0; color: #fff;"><span class="minimal-emoji">✦</span> 経理AIのアドバイス</h2>
-          <button class="outline" style="color: #fff; border-color: #666; padding: 6px 12px; font-size: 12px;" onclick="getExpertAIAdvice()">診断する</button>
+          <button class="outline" style="color: #fff; border-color: #888; background: transparent; padding: 6px 12px; font-size: 12px;" onclick="getExpertAIAdvice()">診断する</button>
         </div>
-        <p id="aiAdvice" style="font-size: 14px; line-height: 1.6; color: #ccc; margin-top: 12px;">「診断する」ボタンを押すと、プロの経理AIが選択された月のデータやトレンドを厳格に分析します。</p>
+        <p id="aiAdvice" style="font-size: 14px; line-height: 1.6; color: #ddd; margin-top: 12px;">「診断する」ボタンを押すと、プロの経理AIが選択された月のデータやトレンドを厳格に分析します。</p>
       </div>
     </div>
 
@@ -421,7 +422,7 @@
       <label>備考 (メモ)</label><input type="text" id="editMemo" placeholder="自由にメモを入力">
       
       <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button onclick="closeEditModal()" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
+        <button onclick="closeEditModal()" class="outline" style="flex: 1;">キャンセル</button>
         <button onclick="updateExpense()" style="flex: 1;">保存して更新</button>
       </div>
       <button onclick="deleteExpense()" class="outline" style="width: 100%; border-color: var(--red-text); color: var(--red-text); margin-top: 10px;">この記録を完全に削除</button>
@@ -439,7 +440,7 @@
       <label>備考 (メモ)</label><input type="text" id="editIncomeMemo">
       
       <div style="display: flex; gap: 10px; margin-top: 16px;">
-        <button onclick="closeEditIncomeModal()" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
+        <button onclick="closeEditIncomeModal()" class="outline" style="flex: 1;">キャンセル</button>
         <button onclick="updateIncome()" style="flex: 1;">保存して更新</button>
       </div>
       <button onclick="deleteIncome()" class="outline" style="width: 100%; border-color: var(--red-text); color: var(--red-text); margin-top: 10px;">この記録を完全に削除</button>
@@ -451,7 +452,7 @@
     <div class="modal-content" style="max-height: 80vh;">
       <h2 id="categoryModalTitle" style="margin-bottom: 16px;"></h2>
       <div id="categoryModalList" style="overflow-y: auto; flex: 1; margin-bottom:16px;"></div>
-      <button onclick="closeCategoryModal()" class="outline" style="width: 100%; border-color: #999; color: #666;">閉じる</button>
+      <button onclick="closeCategoryModal()" class="outline" style="width: 100%;">閉じる</button>
     </div>
   </div>
 
@@ -462,8 +463,8 @@
       <video id="cameraVideo" autoplay playsinline style="width: 100%; max-height: 60vh; background: #000; border-radius: 8px; object-fit: cover;"></video>
       <canvas id="cameraCanvas" class="hidden"></canvas>
       <div style="display: flex; gap: 10px; width: 100%; margin-top: 16px;">
-        <button onclick="closeCameraModal()" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
-        <button onclick="takePhoto()" style="flex: 1; background: var(--primary);">📸 撮影する</button>
+        <button onclick="closeCameraModal()" class="outline" style="flex: 1;">キャンセル</button>
+        <button onclick="takePhoto()" style="flex: 1;">📸 撮影する</button>
       </div>
     </div>
   </div>
@@ -471,8 +472,8 @@
   <!-- ヘルプ用説明書モーダル -->
   <div id="helpModal" class="modal-overlay hidden" style="z-index: 3000;">
     <div class="modal-content">
-      <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--primary);"></h2>
-      <p id="helpDescription" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 24px;"></p>
+      <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--text-color);"></h2>
+      <p id="helpDescription" style="font-size: 14px; line-height: 1.6; color: var(--text-color); margin-bottom: 24px;"></p>
       <button onclick="closeHelpModal()" style="width: 100%;">閉じる</button>
     </div>
   </div>
@@ -634,10 +635,11 @@
   window.evalTrendChartInstance = null;
   window.currentAnalysisMode = 'expense';
 
-  const chartColors = ['#D1E8E2', '#F9E4B7', '#F9C5BD', '#C5D0E6', '#EBEBEB'];
-  const barColors = ['#D1E8E2', '#C5D0E6', '#F9C5BD'];
-  const incomeChartColors = ['#C8E6C9', '#A5D6A7', '#81C784', '#66BB6A', '#4CAF50'];
-  const incomeBarColors = ['#E8F5E9', '#C8E6C9', '#A5D6A7'];
+  // ★ ダスティ（くすんだ）淡いミニマル系カラーパレット
+  const chartColors = ['#a8b8aa', '#cfc5b4', '#c4a9a9', '#a6b0be', '#d1d6d3'];
+  const barColors = ['#a8b8aa', '#a6b0be', '#c4a9a9'];
+  const incomeChartColors = ['#8a998b', '#a8b8aa', '#bccac0', '#d2dbd4', '#e6ebe7'];
+  const incomeBarColors = ['#a8b8aa', '#bccac0', '#d2dbd4'];
 
   const ADMIN_ID = "emoinjaa0";
 
@@ -1008,7 +1010,6 @@
     window.renderCharts();
   };
 
-  // 収入源の予測変換を更新する
   window.updateIncomeDatalist = function() {
     const datalist = document.getElementById('incomeSourceOptions');
     if (!datalist) return;
@@ -1258,7 +1259,7 @@
               1. 画像がレシートでない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "レシートを認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
               2. 「合計」「お預かり金額」「お釣り」などは絶対に見ない。
               3. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
-              4. 割引や値引きがある場合、該当商品の unit_price から直接引き算すること。
+              4. 割引や値引きがある場合、該当商品の unit_price から直接引き算すること。ただし、「ポイント利用」がある場合は、該当商品から引かずに独立したアイテムとして抽出し、商品名に「ポイント」を含め、金額をマイナスにしてください。
               5. 内税・外税の厳格判定：
                 - 「税込(内税)」の場合：税単独アイテムを作らず、商品価格(price)自体に含める。
                 - 「税別(外税)」の場合：消費税額を（name: "外税(消費税)", unit_price: 0, qty: 1, price: 0, tax: 金額, category: "税"）として独立抽出。
@@ -1284,7 +1285,6 @@
       
       const parsedData = JSON.parse(jsonText);
       
-      // AIがエラー判定をした場合の処理
       if (parsedData.error) {
         throw new Error(parsedData.error);
       }
@@ -1293,6 +1293,7 @@
         let addedCount = 0;
         for (const item of parsedData.items) {
           const isTax = item.name === "外税(消費税)";
+          const isPoint = item.name.includes("ポイント") || parseInt(item.unit_price) < 0;
           const expense = {
             id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
             appUserId: window.currentUser,
@@ -1305,7 +1306,7 @@
             tax: parseInt(item.tax) || 0,
             category: item.category || "雑費",
             memo: item.memo || "",
-            isNecessary: isTax ? true : null
+            isNecessary: (isTax || isPoint) ? true : null
           };
           await fsSaveExpense(expense);
           addedCount++;
@@ -1326,6 +1327,7 @@
     const unitPrice = parseInt(document.getElementById('inputUnitPrice').value) || 0;
     const qty = parseInt(document.getElementById('inputQty').value) || 1;
     const isTax = name === "外税(消費税)";
+    const isPoint = name.includes("ポイント") || unitPrice < 0;
     
     const expense = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
@@ -1339,7 +1341,7 @@
       tax: parseInt(document.getElementById('inputTax').value) || 0,
       category: document.getElementById('inputCategory').value,
       memo: document.getElementById('inputMemo').value.trim() || "",
-      isNecessary: isTax ? true : null
+      isNecessary: (isTax || isPoint) ? true : null
     };
     
     await fsSaveExpense(expense);
@@ -1385,7 +1387,6 @@
     }
     if (document.getElementById('admin').classList.contains('active')) window.loadAdminUsers();
     
-    // 収入源の予測変換リストを更新
     window.updateIncomeDatalist();
   };
 
@@ -1396,7 +1397,7 @@
 
   window.updateSwipeHistory = function() {
     const historyList = document.getElementById('swipeHistoryList');
-    const reviewed = window.expenses.filter(e => e.isNecessary !== null && e.name !== "外税(消費税)");
+    const reviewed = window.expenses.filter(e => e.isNecessary !== null && e.name !== "外税(消費税)" && !e.name.includes("ポイント") && e.price >= 0);
     if (reviewed.length === 0) { historyList.innerHTML = '<p style="color:#666;">スワイプ記録がありません</p>'; return; }
 
     const byDate = {};
@@ -1473,7 +1474,8 @@
         
         byDate[date][store].forEach(e => {
           let evalIcon = '<span style="color:#ccc;">ー</span>';
-          if (e.isNecessary === true && e.name !== "外税(消費税)") evalIcon = '<span class="minimal-emoji" style="background:var(--pale-green); border:1px solid var(--pale-green-border); border-radius:4px; padding:2px 4px; font-size:10px;">👍</span>';
+          const isTaxOrPoint = e.name === "外税(消費税)" || e.name.includes("ポイント") || e.price < 0;
+          if (e.isNecessary === true && !isTaxOrPoint) evalIcon = '<span class="minimal-emoji" style="background:var(--pale-green); border:1px solid var(--pale-green-border); border-radius:4px; padding:2px 4px; font-size:10px;">👍</span>';
           if (e.isNecessary === false) evalIcon = '<span class="minimal-emoji" style="background:var(--pale-red); border:1px solid var(--pale-red-border); border-radius:4px; padding:2px 4px; font-size:10px;">👎</span>';
           
           const total = e.price + e.tax;
@@ -1638,7 +1640,8 @@
         else totals["雑費"] += cost;
         monthTotal += cost;
         
-        if (e.isNecessary === true && e.name !== "外税(消費税)") {
+        const isTaxOrPoint = e.name === "外税(消費税)" || e.name.includes("ポイント") || e.price < 0;
+        if (e.isNecessary === true && !isTaxOrPoint) {
           yesTotal += cost;
         } else if (e.isNecessary === false) {
           noTotal += cost;
@@ -1764,13 +1767,15 @@
         }
       });
 
+      // ★ 👍👎率の推移グラフ (整理ボタンと同じ淡い色に変更)
       const yesData = [];
       const noData = [];
       targetMonths.forEach(m => {
         let y = 0, n = 0;
         window.expenses.filter(e => e.date.startsWith(m)).forEach(e => {
           const cost = e.price + e.tax;
-          if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
+          const isTaxOrPoint = e.name === "外税(消費税)" || e.name.includes("ポイント") || e.price < 0;
+          if (e.isNecessary === true && !isTaxOrPoint) y += cost;
           else if (e.isNecessary === false) n += cost;
         });
         const total = y + n;
@@ -1791,15 +1796,15 @@
             { 
               label: '👍 必要(%)', 
               data: yesData, 
-              backgroundColor: '#e8f5e9', 
-              borderColor: '#c8e6c9',
+              backgroundColor: '#f0f4f1', 
+              borderColor: '#a8b8aa',
               borderWidth: 1
             },
             { 
               label: '👎 無駄(%)', 
               data: noData, 
-              backgroundColor: '#ffebee', 
-              borderColor: '#ffcdd2',
+              backgroundColor: '#f7f1f1', 
+              borderColor: '#c4a9a9',
               borderWidth: 1
             }
           ]
