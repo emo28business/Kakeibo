@@ -720,6 +720,15 @@
     </div>
   </div>
 
+  <!-- ヘルプ用モーダル -->
+  <div id="helpModal" class="modal-overlay hidden" style="z-index: 3000;">
+    <div class="modal-content" style="max-width: 400px;">
+      <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--primary); display:flex; align-items:center; gap:8px;"></h2>
+      <p id="helpDescription" style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 24px;"></p>
+      <button onclick="closeHelpModal()" style="width: 100%;">閉じる</button>
+    </div>
+  </div>
+
   <!-- OCR解析結果の確認・修正用モーダル -->
   <div id="ocrConfirmModal" class="modal-overlay hidden" style="z-index: 2500;">
     <div class="modal-content" style="max-height: 90vh; width: 95%; max-width: 500px;">
@@ -2363,42 +2372,24 @@
       const compressedDataUrl = await compressImage(file);
       const base64String = compressedDataUrl.split(',')[1];
 
-      let catInstructions = "";
-      if (window.aiAutoCategory) {
-        catInstructions = `
-        各アイテムを以下のカテゴリリストのいずれかに分類してください: [${window.userCategories.join(', ')}]
-        分類基準の例（名前が一致しない場合でも意味合いで分類してください）：
-        - 食費(純)：料理に使う食材や必需な食材、飲み物（ジュース、酒類は除く）
-        - 食費(雑)：総菜やインスタントを含む既製品の食品、ないしはジュース、酒類。
-        - 経費：交通費、日用品、公共料金など生活するうえで必要なもののうち、食料品を除いたもの。
-        - 雑費：レジャー、観光など。
-        ※税（消費税など）が単独で存在する場合は「税」としてください。
-        `;
-      } else {
-        catInstructions = `自動分類はオフになっています。すべてのアイテムのcategoryを「${window.userCategories[0] || '未分類'}」に設定してください。`;
-      }
+      // プロンプトを大幅に短縮・最適化して処理を高速化
+      let catInstructions = window.aiAutoCategory
+        ? `[${window.userCategories.join(', ')}]のいずれかに分類。該当なしは「雑費」、単独の税は「税」`
+        : `全て「${window.userCategories[0] || '未分類'}」に分類`;
 
       const payload = {
         contents: [{
           parts: [
-            { text: `
-              あなたは優秀な経理アシスタントです。レシート、請求書、ECサイトの購入履歴のスクリーンショットなどの画像から文字情報を解析し、JSON形式の配列として出力してください。
-【重要ルール】
-1. 画像が該当する書類でない場合、または文字が不鮮明で読み取れない場合は、必ず { "error": "認識できませんでした。別の画像をお試しください。" } というJSONのみを返してください。
-2. 複数個購入時は、単価を unit_price に、個数を qty に分ける。price は (unit_price * qty) の合計額にする。
-3. 内税・外税の厳格判定：
-  - 「税込(内税)」の場合：税単独アイテムを作らず、商品価格(price)自体に含める。
-  - 「税別(外税)」の場合：消費税額を（name: "外税(消費税)", unit_price: 0, qty: 1, price: 0, tax: 金額, category: "税"）として独立抽出。
-4. 【推測・補完機能】商品名が途切れている場合（例：カツドンベン）や、品名が不明瞭な場合は、あなたの持つ広範な一般的な知識・内部知識を活用して、最も妥当で完全な商品名（例：かつ丼弁当）を推測して補完してください。
-5. 【プライバシー保護】店名(store)について、「〇〇店」「〇〇支店」などの地域や住所を特定できる支店名情報は極力除外し、大元のブランド名・企業名のみにしてください。（例：「セブンイレブン 新宿店」→「セブンイレブン」）
-6. カテゴリ分類について:
-${catInstructions}
-
-【出力フォーマット】
-成功時: { "items": [ { "date": "YYYY-MM-DD", "store": "店名", "name": "商品名", "unit_price": 100, "qty": 1, "price": 100, "tax": 0, "category": "カテゴリ名", "memo": "" } ] }
-エラー時: { "error": "エラーメッセージ" }
-
-絶対に思考プロセス、挨拶、説明を出力しないでください。出力は必ず波括弧 { で始まり、波括弧 } で終わる純粋なJSONテキストのみとしてください。`
+            { text: `画像(レシート等)を解析しJSONを出力。
+ルール:
+1. 不明・非対象は {"error":"認識不可"} を返す。
+2. unit_price(単価), qty(数量), price(合計額)を分ける。
+3. 税込はpriceに含め、外税は name:"外税(消費税)", category:"税" として独立。
+4. 途切れた商品名は妥当な名称に補完。
+5. 店名(store)の支店名は除外(例: セブンイレブン)。
+6. カテゴリ: ${catInstructions}
+出力JSON形式(これ以外出力しない):
+{"items":[{"date":"YYYY-MM-DD","store":"店名","name":"品名","unit_price":100,"qty":1,"price":100,"tax":0,"category":"カテゴリ","memo":""}]}`
             },
             {
               inline_data: { mime_type: "image/jpeg", data: base64String }
@@ -3276,12 +3267,10 @@ ${catInstructions}
 
     const payload = {
       contents: [{
-        parts: [{ text: `
-          あなたは優秀な経理責任者です。個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを生成してください。
-条件：10日ごとのペース配分への言及、具体的な改善・向上策の提示。
-【推測・補完機能】最新の経済状況や一般的な節約術などのあなたの持つ広範な内部知識を活用し、具体的なデータも交えてアドバイスに役立ててください。
-対象月: ${selectedMonth} / 上旬: ¥${blockTotals[0]} / 中旬: ¥${blockTotals[1]} / 下旬: ¥${blockTotals[2]}
-データ: ${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
+        parts: [{ text: `個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを出力してください。
+条件:10日ごとのペース配分への言及、具体的改善策の提示。
+対象月:${selectedMonth} 上旬:¥${blockTotals[0]} 中旬:¥${blockTotals[1]} 下旬:¥${blockTotals[2]}
+データ:${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
         }]
       }]
     };
