@@ -335,7 +335,7 @@
         <div style="margin-top: 8px; font-size: 12px;">
           <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">APIキーの発行、導入方法はこちら</a>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: 未取得</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
       </div>
 
       <div class="card">
@@ -882,54 +882,6 @@
     }
   };
 
-  // ★ 最新のFlashモデルを動的に取得・キャッシュする関数 (フォールバック待機をなくすための高速化)
-  window.cachedFlashModel = null;
-  window.getLatestFlashModel = async function(apiKey) {
-    if (window.cachedFlashModel) return window.cachedFlashModel;
-
-    // 1. ローカルストレージのキャッシュを確認 (24時間有効)
-    const cachedModel = localStorage.getItem('cached_gemini_model');
-    const cachedTime = localStorage.getItem('cached_gemini_model_time');
-    const now = Date.now();
-
-    if (cachedModel && cachedTime && (now - parseInt(cachedTime)) < 24 * 60 * 60 * 1000) {
-      window.cachedFlashModel = cachedModel;
-      const displayElem = document.getElementById('currentModelDisplay');
-      if (displayElem) displayElem.innerText = `使用AIモデル: ${window.cachedFlashModel}`;
-      return window.cachedFlashModel;
-    }
-
-    try {
-      const response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
-      if (response.ok) {
-        const data = await response.json();
-        // gemini-X.X-flash の形式に厳密に一致するモデルのみを抽出し、previewやomniなどを除外
-        const flashModels = data.models
-          .map(m => m.name.replace('models/', ''))
-          .filter(name => /^gemini-\d+\.\d+-flash$/.test(name));
-        
-        if (flashModels.length > 0) {
-          // 文字列ソート（新しいバージョン番号が上に来るように）
-          flashModels.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
-          window.cachedFlashModel = flashModels[0];
-
-          // 2. 取得した最新モデル名をブラウザに保存（次回以降の通信をスキップ）
-          localStorage.setItem('cached_gemini_model', window.cachedFlashModel);
-          localStorage.setItem('cached_gemini_model_time', now.toString());
-        }
-      }
-    } catch (e) {
-      console.warn("モデル一覧の取得に失敗:", e);
-    }
-    // API失敗時の念のためのデフォルト
-    if (!window.cachedFlashModel) window.cachedFlashModel = 'gemini-3.7-flash';
-    
-    const displayElem = document.getElementById('currentModelDisplay');
-    if (displayElem) displayElem.innerText = `使用AIモデル: ${window.cachedFlashModel}`;
-    
-    return window.cachedFlashModel;
-  };
-
   // ★ 過去の「経費」カテゴリを自動で再分類する機能
   window.migrateLegacyExpenses = async function(userId) {
     const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
@@ -938,7 +890,7 @@
     const legacyExpenses = window.expenses.filter(e => e.category === "経費");
     if (legacyExpenses.length === 0) return;
 
-    const targetModel = await window.getLatestFlashModel(apiKey);
+    const targetModel = 'gemini-3.7-flash';
     const payload = {
       contents: [{
         parts: [{ text: `以下の経費リストを「経費(日用品)」「経費(交通費)」「経費(公共料金)」「経費(その他)」のいずれかに分類してください。\nデータ: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: e.store})))}` }]
@@ -1182,7 +1134,6 @@
     const savedKey = localStorage.getItem('gemini_api_key');
     if (savedKey) {
       document.getElementById('apiKey').value = savedKey;
-      window.getLatestFlashModel(savedKey); // 画面読み込み時にモデルを事前取得
     } else {
       document.getElementById('apiKey').value = '';
     }
@@ -1558,6 +1509,7 @@
     }
   };
 
+
   // --- ブック管理ロジック ---
   window.loadBooks = function() {
     const savedBooks = localStorage.getItem(`books_${window.currentUser}`);
@@ -1692,6 +1644,7 @@
     }
   };
   // --- ブック管理ここまで ---
+
 
   window.migrateLocalToCloudIfNeeded = async function(userId) {
     if (!isCloudEnabled || !firebaseUser) return;
@@ -1998,7 +1951,6 @@
           const decodedKey = decodeURIComponent(atob(userSnap.data().apiKey));
           localStorage.setItem('gemini_api_key', decodedKey);
           document.getElementById('apiKey').value = decodedKey;
-          window.getLatestFlashModel(decodedKey); // 復元後にもキャッシュを更新
         }
       } catch(e) {
         console.error("APIキー復元エラー:", e);
@@ -2010,7 +1962,6 @@
     const key = document.getElementById('apiKey').value.trim();
     if (!key) return alert("APIキーを入力してください。");
     localStorage.setItem('gemini_api_key', key);
-    window.getLatestFlashModel(key); // 保存時にすぐさま最新を取得
     
     if (isCloudEnabled && firebaseUser && window.currentUser) {
       try {
@@ -2504,7 +2455,6 @@
     });
   }
 
-  // ★ 画像アップロード (最適化されたプロンプトとスキーマで高速・高精度処理)
   window.handleImageUpload = async function(e) {
     const file = e.target?.files[0] || e.target;
     if (!file || !file.name) return;
@@ -2520,7 +2470,6 @@
       const compressedDataUrl = await compressImage(file);
       const base64String = compressedDataUrl.split(',')[1];
 
-      // プロンプトを極限までシンプルにし、JSON Schema (Structured Outputs) によってフォーマットを強制する
       let catInstructions = window.aiAutoCategory
         ? `[${window.userCategories.join(', ')}]のいずれかに分類。
 分類基準:
@@ -2550,7 +2499,7 @@
         }],
         generationConfig: { 
           responseMimeType: "application/json",
-          temperature: 0, // AIの迷いをなくし最速で決断させる
+          temperature: 0,
           responseSchema: {
             type: "OBJECT",
             properties: {
@@ -2577,9 +2526,7 @@
         }
       };
 
-      // 事前取得した最新のFlashモデルを使用 (フォールバック待機なし)
-      const targetModel = await window.getLatestFlashModel(apiKey);
-      
+      const targetModel = 'gemini-3.7-flash';
       let response;
       try {
         response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -2598,7 +2545,6 @@
       const result = await response.json();
       if (!result.candidates || result.candidates.length === 0) throw new Error("解析結果が空でした。");
 
-      // schemaを使用しているため余計なマークダウンは発生しにくいが念のためクリーニング
       let jsonText = result.candidates[0].content?.parts[0]?.text || "";
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
       
@@ -3409,7 +3355,6 @@
     }
   }
 
-  // ★ AIアドバイス機能 (高速化・スキーマによる安定化を導入)
   window.getExpertAIAdvice = async function() {
     const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) return alert("APIキーが設定されていません。");
@@ -3437,14 +3382,14 @@
         }]
       }],
       generationConfig: {
-        temperature: 0, // 高速化と安定化
+        temperature: 0,
       }
     };
 
-    const targetModel = await window.getLatestFlashModel(apiKey);
+    const targetModel = 'gemini-3.7-flash';
     let response;
     try {
-      response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify(payload)
