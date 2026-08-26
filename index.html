@@ -1075,11 +1075,29 @@
       
       const payload = {
         contents: [{
-          parts: [{ text: `以下の経費アイテムを、「経費(日用品)」「経費(交通費)」「経費(公共料金)」「経費(その他)」のいずれかに分類し、JSON形式で出力してください。
-出力形式: {"results":[{"id":"...","category":"..."}]}
+          parts: [{ text: `以下の経費アイテムを、「経費(日用品)」「経費(交通費)」「経費(公共料金)」「経費(その他)」のいずれかに分類してください。
 入力: ${JSON.stringify(chunk)}` }]
         }],
-        generationConfig: { responseMimeType: "application/json" }
+        generationConfig: { 
+          temperature: 0,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              results: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    id: { type: "STRING" },
+                    category: { type: "STRING", enum: ["経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)"] }
+                  },
+                  required: ["id", "category"]
+                }
+              }
+            }
+          }
+        }
       };
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -2464,24 +2482,48 @@
       const payload = {
         contents: [{
           parts: [
-            { text: `画像(レシート等)を解析しJSONを出力。
+            { text: `画像(レシート等)を解析しデータを抽出してください。
 ルール:
-1. 不明・非対象は {"error":"認識不可"} を返す。
-2. unit_price(単価), qty(数量), price(合計額)を分ける。
-3. 税込はpriceに含め、外税は name:"外税(消費税)", category:"税" として独立。
-4. 商品名が途中で途切れている場合、LLM内部の知識で商品を推定して妥当な名称に補完。
-5. 店名(store)の支店名は除外(例: セブンイレブン)。
-6. カテゴリは以下を厳守:
-${catInstructions}
-出力JSON形式(これ以外出力しない):
-{"items":[{"date":"YYYY-MM-DD","store":"店名","name":"品名","unit_price":100,"qty":1,"price":100,"tax":0,"category":"カテゴリ","memo":""}]}`
+1. 不明・非対象な画像の場合は error フィールドにエラー理由を記述してください。
+2. 税込はpriceに含め、外税は name:"外税(消費税)", category:"税" として独立させてください。
+3. 商品名が途中で途切れている場合、LLM内部の知識で商品を推定して妥当な名称に補完してください。
+4. 店名(store)の支店名は除外してください(例: セブンイレブン)。
+5. カテゴリは以下を厳守してください:
+${catInstructions}`
             },
             {
               inline_data: { mime_type: "image/jpeg", data: base64String }
             }
           ]
         }],
-        generationConfig: { responseMimeType: "application/json" }
+        generationConfig: { 
+          temperature: 0,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              error: { type: "STRING", description: "レシート・書類として認識できない場合のエラー理由" },
+              items: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    date: { type: "STRING", description: "YYYY-MM-DD" },
+                    store: { type: "STRING" },
+                    name: { type: "STRING" },
+                    unit_price: { type: "INTEGER" },
+                    qty: { type: "INTEGER" },
+                    price: { type: "INTEGER", description: "税込の合計金額" },
+                    tax: { type: "INTEGER" },
+                    category: { type: "STRING" },
+                    memo: { type: "STRING" }
+                  },
+                  required: ["date", "store", "name", "unit_price", "qty", "price", "tax", "category"]
+                }
+              }
+            }
+          }
+        }
       };
 
       let modelName = 'gemini-3.7-flash';
