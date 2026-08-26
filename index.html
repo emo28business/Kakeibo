@@ -862,12 +862,45 @@
   const incomeChartColors = ['#9ec2ae', '#a0b1d1', '#cc9db0', '#b0cc9d', '#a0a6d1'];
   const incomeBarColors = ['#9ec2ae', '#a0b1d1', '#cc9db0'];
 
+  // ★ API呼び出し時の503/429エラー対策用 (Exponential Backoff リトライ)
+  window.fetchWithRetry = async function(url, options = {}, maxRetries = 3) {
+    let delay = 1000;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+        // 正常、またはリトライ対象外のエラー（400番台など。ただし429はリトライ）ならすぐ返す
+        if (response.ok || (response.status !== 503 && response.status !== 429 && response.status !== 500 && response.status !== 502)) {
+          return response;
+        }
+        if (i === maxRetries - 1) return response; // 最後の試行ならそのまま返す
+      } catch (error) {
+        if (i === maxRetries - 1) throw error; // ネットワークエラー等の場合は最後にthrow
+      }
+      // コンソールには出さず、指定時間待機して再試行
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2; // 1秒 -> 2秒 -> 4秒...と待機時間を増やす
+    }
+  };
+
   // ★ 最新のFlashモデルを動的に取得・キャッシュする関数 (フォールバック待機をなくすための高速化)
   window.cachedFlashModel = null;
   window.getLatestFlashModel = async function(apiKey) {
     if (window.cachedFlashModel) return window.cachedFlashModel;
+
+    // 1. ローカルストレージのキャッシュを確認 (24時間有効)
+    const cachedModel = localStorage.getItem('cached_gemini_model');
+    const cachedTime = localStorage.getItem('cached_gemini_model_time');
+    const now = Date.now();
+
+    if (cachedModel && cachedTime && (now - parseInt(cachedTime)) < 24 * 60 * 60 * 1000) {
+      window.cachedFlashModel = cachedModel;
+      const displayElem = document.getElementById('currentModelDisplay');
+      if (displayElem) displayElem.innerText = `使用AIモデル: ${window.cachedFlashModel}`;
+      return window.cachedFlashModel;
+    }
+
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+      const response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
       if (response.ok) {
         const data = await response.json();
         // gemini-X.X-flash の形式に厳密に一致するモデルのみを抽出し、previewやomniなどを除外
@@ -879,6 +912,10 @@
           // 文字列ソート（新しいバージョン番号が上に来るように）
           flashModels.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
           window.cachedFlashModel = flashModels[0];
+
+          // 2. 取得した最新モデル名をブラウザに保存（次回以降の通信をスキップ）
+          localStorage.setItem('cached_gemini_model', window.cachedFlashModel);
+          localStorage.setItem('cached_gemini_model_time', now.toString());
         }
       }
     } catch (e) {
@@ -928,7 +965,7 @@
     };
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      const response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       if (response.ok) {
@@ -1180,8 +1217,12 @@
       window.checkNotification();
       
       window.restoreApiKey().then(() => {
-        // APIキーが復元された後に過去データをマイグレーション
-        window.migrateLegacyExpenses(window.currentUser); 
+        // APIキーが復元された後、アプリの起動が落ち着いてから(10秒後)にマイグレーションを実行し、サーバー負荷を分散
+        setTimeout(() => {
+          if (window.currentUser) {
+            window.migrateLegacyExpenses(window.currentUser); 
+          }
+        }, 10000);
       });
     } else {
       document.getElementById('authView').classList.remove('hidden');
@@ -2541,7 +2582,7 @@
       
       let response;
       try {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify(payload)
@@ -2551,7 +2592,7 @@
       }
       
       if (!response.ok) {
-        throw new Error(`通信エラー (${response.status})。時間をおいて再試行してください。`);
+        throw new Error(`通信エラー (${response.status})。サーバーが混雑しています。再度お試しください。`);
       }
       
       const result = await response.json();
@@ -3403,7 +3444,7 @@
     const targetModel = await window.getLatestFlashModel(apiKey);
     let response;
     try {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify(payload)
