@@ -336,7 +336,7 @@
         <div style="margin-top: 8px; font-size: 12px;">
           <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">APIキーの発行、導入方法はこちら</a>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.6-flash</p>
       </div>
 
       <div class="card">
@@ -1163,7 +1163,7 @@
     
     document.getElementById('notificationContent').innerHTML = `
       <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-        <li><b>AI精度UP＆高速化:</b> 解析モデルをgemini-3.7-flashにアップデート。処理が高速になり、数字と内税の認識精度がアップしました！</li>
+        <li><b>AI精度UP＆高速化:</b> 解析モデルをgemini-3.6-flashにアップデート。処理が高速になり、数字と内税の認識精度がアップしました！</li>
         <li><b>ソート順の改善:</b> 全ての履歴が新しい順に表示されるようになりました。</li>
         <li><b>収入機能の修正:</b> 収入の記録ができなかった不具合を改修しました。</li>
       </ul>
@@ -2018,14 +2018,14 @@
         generationConfig: { responseMimeType: "application/json" }
       };
 
-      let modelName = 'gemini-3.7-flash';
+      let modelName = 'gemini-3.6-flash';
       let response;
       try {
         response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       } catch(fetchError) { throw new Error("ネットワークエラーが発生しました。"); }
       
       if (!response.ok) {
-        modelName = 'gemini-3.7-flash';
+        modelName = 'gemini-3.6-flash';
         response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!response.ok) throw new Error(`通信エラー (${response.status})。時間をおいて再試行してください。`);
       }
@@ -2622,14 +2622,14 @@
       generationConfig: { responseMimeType: "text/plain" }
     };
 
-    let modelName = 'gemini-3.7-flash';
+    let modelName = 'gemini-3.6-flash';
     let response;
     try {
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     } catch(fetchError) { return adviceElem.innerText = "ネットワークエラーが発生しました。"; }
 
     if (!response.ok) {
-      modelName = 'gemini-3.7-flash';
+      modelName = 'gemini-3.6-flash';
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!response.ok) return adviceElem.innerText = `分析に失敗しました。(${response.status})`;
     }
