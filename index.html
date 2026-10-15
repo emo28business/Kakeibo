@@ -317,6 +317,7 @@
     <div class="tabs">
       <div class="tab active" onclick="switchTab('record', this)">記録</div>
       <div class="tab" onclick="switchTab('income', this)">収入</div>
+      <div class="tab" onclick="switchTab('schedule', this)">予定</div>
       <div class="tab" onclick="switchTab('swipe', this)">整理 <span id="badgeUnreviewed" style="color:var(--red-text);font-weight:bold;"></span></div>
       <div class="tab" onclick="switchTab('history', this)">履歴</div>
       <div class="tab" onclick="switchTab('analysis', this)">分析</div>
@@ -332,11 +333,10 @@
           <input type="text" id="apiKey" placeholder="APIキーを入力" style="margin-bottom: 0;">
           <button onclick="saveApiKey()">保存</button>
         </div>
-        <!-- ★ここにAPIキーのリンクを追加しました -->
         <div style="margin-top: 8px; font-size: 12px;">
           <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">APIキーの発行、導入方法はこちら</a>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.8-flash</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
       </div>
 
       <div class="card">
@@ -406,6 +406,64 @@
       </div>
     </div>
 
+    <!-- 2.5 予定 (サブスク・クレカ請求管理) タブ -->
+    <div id="schedule" class="tab-content">
+      <div class="card">
+        <h2>クレカ請求・支払予定を登録 <span class="help-icon" onclick="showHelp('schedule')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
+        <p style="font-size: 12px; color: #888; margin-bottom: 12px;">確定したクレジットカードの請求額や、将来の引き落とし予定を事前に記録して管理します。</p>
+        <label>支払予定日 (引き落とし日)</label>
+        <input type="date" id="schedDate">
+        <label>内容 (カード名・請求元など)</label>
+        <input type="text" id="schedName" placeholder="例: 楽天カード 11月引き落とし分">
+        <label>予定金額</label>
+        <input type="number" id="schedAmount" placeholder="0">
+        <label>カテゴリ</label>
+        <select id="schedCategory"></select>
+        <label>備考 (メモ)</label>
+        <input type="text" id="schedMemo" placeholder="内訳やメモを入力">
+        <button onclick="saveScheduledPayment()" style="width: 100%;">予定リストに追加</button>
+      </div>
+
+      <div class="card">
+        <h2>予定されている支払い一覧</h2>
+        <p style="font-size: 11px; color: #888; margin-bottom: 12px;">※支払日が来たら「出費に反映」を押すと、実際の家計簿（履歴）に記録されます。</p>
+        <div id="scheduledPaymentList"></div>
+      </div>
+
+      <div class="card">
+        <h2>サブスク (毎月固定費) の管理</h2>
+        <p style="font-size: 12px; color: #888; margin-bottom: 12px;">毎月自動で発生するサブスクリプションを登録しておくと、毎月ワンタップで出費に計上できます。</p>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1;">
+            <label>毎月の支払日</label>
+            <select id="subDay">
+              <option value="1">毎月 1日</option><option value="5">毎月 5日</option><option value="10">毎月 10日</option>
+              <option value="15">毎月 15日</option><option value="20">毎月 20日</option><option value="25">毎月 25日</option>
+              <option value="27">毎月 27日</option><option value="28">毎月 28日</option><option value="99">毎月 月末</option>
+            </select>
+          </div>
+          <div style="flex: 2;">
+            <label>サービス名</label>
+            <input type="text" id="subName" placeholder="例: Netflix, Amazonプライム">
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1;">
+            <label>月額料金</label>
+            <input type="number" id="subAmount" placeholder="0">
+          </div>
+          <div style="flex: 1;">
+            <label>カテゴリ</label>
+            <select id="subCategory"></select>
+          </div>
+        </div>
+        <button onclick="saveSubscription()" class="outline" style="width: 100%; margin-bottom: 16px;">+ サブスクを登録</button>
+        
+        <h3 style="font-size: 14px; margin-bottom: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">登録中のサブスク一覧</h3>
+        <div id="subscriptionList"></div>
+      </div>
+    </div>
+
     <!-- 3. 整理(スワイプ)タブ -->
     <div id="swipe" class="tab-content">
       <h2>出費の必要性を振り返る <span class="help-icon" onclick="showHelp('swipe')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
@@ -426,6 +484,40 @@
 
     <!-- 5. 分析タブ -->
     <div id="analysis" class="tab-content">
+      <div class="card">
+        <h2 style="margin-bottom: 12px;"><span class="material-symbols-outlined" style="font-size:20px; margin-right:6px; color:var(--primary);">date_range</span> 期間指定で収支を見る</h2>
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+          <input type="date" id="customStartDate" style="margin-bottom: 0; flex: 1; padding: 8px;">
+          <span style="color: #888;">〜</span>
+          <input type="date" id="customEndDate" style="margin-bottom: 0; flex: 1; padding: 8px;">
+        </div>
+        <button onclick="renderCustomPeriodAnalysis()" style="width: 100%; padding: 10px; margin-bottom: 12px;">この期間で集計</button>
+        
+        <div id="customPeriodResult" class="hidden" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 8px;">
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <div style="flex: 1; background: var(--pale-green); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--pale-green-border);">
+              <div style="font-size: 11px; color: var(--green-text); font-weight: bold;">期間収入</div>
+              <div id="customPeriodIncomeTotal" style="font-size: 15px; font-weight: bold; color: var(--green-text); margin-top: 4px;">¥0</div>
+            </div>
+            <div style="flex: 1; background: var(--pale-red); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--pale-red-border);">
+              <div style="font-size: 11px; color: var(--red-text); font-weight: bold;">期間出費</div>
+              <div id="customPeriodExpenseTotal" style="font-size: 15px; font-weight: bold; color: var(--red-text); margin-top: 4px;">¥0</div>
+            </div>
+            <div style="flex: 1; background: #f9f9f9; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--border-color);">
+              <div style="font-size: 11px; color: #666; font-weight: bold;">収支差額</div>
+              <div id="customPeriodBalance" style="font-size: 15px; font-weight: bold; color: var(--text-color); margin-top: 4px;">¥0</div>
+            </div>
+          </div>
+          
+          <h3 style="font-size: 13px; margin-bottom: 4px; color: #555;">出費（カテゴリ別）</h3>
+          <ul id="customPeriodExpenseList" class="chart-legend" style="margin-top: 0; margin-bottom: 16px;"></ul>
+          
+          <h3 style="font-size: 13px; margin-bottom: 4px; color: #555;">収入（収入源別）</h3>
+          <ul id="customPeriodIncomeList" class="chart-legend" style="margin-top: 0;"></ul>
+          <p style="font-size:11px; color:#999; text-align:center; margin-top:8px; margin-bottom:0;">※各項目をタップすると期間内の明細が表示されます</p>
+        </div>
+      </div>
+
       <div class="toggle-group">
         <button id="btnAnalysisExpense" onclick="setAnalysisMode('expense')">出費分析</button>
         <button id="btnAnalysisIncome" class="outline" onclick="setAnalysisMode('income')">収入分析</button>
@@ -511,7 +603,7 @@
         <button onclick="updateCredentials()" style="width: 100%;">アカウント情報を変更</button>
       </div>
 
-      <!-- ★ ブック管理 -->
+      <!-- ブック管理 -->
       <div class="card">
         <h2>ブック(帳簿)の管理 <span class="help-icon" onclick="showHelp('book')"><span class="material-symbols-outlined" style="font-size:14px;">help</span></span></h2>
         <p style="font-size: 12px; color: #888; margin-bottom: 16px;">家計、プライベートマネーなど、最大3つまで帳簿を分けて管理できます。<br>※ 右端の「≡」をつかんで並べ替えができます。</p>
@@ -720,6 +812,15 @@
     </div>
   </div>
 
+  <!-- ヘルプ用モーダル -->
+  <div id="helpModal" class="modal-overlay hidden" style="z-index: 3000;">
+    <div class="modal-content" style="max-width: 400px;">
+      <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--primary); display:flex; align-items:center; gap:8px;"></h2>
+      <p id="helpDescription" style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 24px;"></p>
+      <button onclick="closeHelpModal()" style="width: 100%;">閉じる</button>
+    </div>
+  </div>
+
   <!-- OCR解析結果の確認・修正用モーダル -->
   <div id="ocrConfirmModal" class="modal-overlay hidden" style="z-index: 2500;">
     <div class="modal-content" style="max-height: 90vh; width: 95%; max-width: 500px;">
@@ -792,44 +893,6 @@
     </div>
   </div>
 
-  <!-- ヘルプ用モーダル -->
-  <div id="helpModal" class="modal-overlay hidden" style="z-index: 3000;">
-    <div class="modal-content" style="max-width: 400px;">
-      <h2 id="helpTitle" style="margin-bottom: 12px; color: var(--primary); display:flex; align-items:center; gap:8px;"></h2>
-      <p id="helpDescription" style="font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 24px;"></p>
-      <button onclick="closeHelpModal()" style="width: 100%;">閉じる</button>
-    </div>
-  </div>
-
-  <!-- UIブロック対策用カスタムモーダル -->
-  <div id="customAlertModal" class="modal-overlay hidden" style="z-index: 9999;">
-    <div class="modal-content" style="max-width: 300px; text-align: center; padding: 20px;">
-      <p id="customAlertMessage" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5;"></p>
-      <button onclick="document.getElementById('customAlertModal').classList.add('hidden')" style="width: 100%;">OK</button>
-    </div>
-  </div>
-
-  <div id="customConfirmModal" class="modal-overlay hidden" style="z-index: 9999;">
-    <div class="modal-content" style="max-width: 300px; text-align: center; padding: 20px;">
-      <p id="customConfirmMessage" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5;"></p>
-      <div style="display: flex; gap: 10px;">
-        <button id="customConfirmCancel" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
-        <button id="customConfirmOk" style="flex: 1; background: var(--red-text);">OK</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="customPromptModal" class="modal-overlay hidden" style="z-index: 9999;">
-    <div class="modal-content" style="max-width: 300px; text-align: center; padding: 20px;">
-      <p id="customPromptMessage" style="margin-bottom: 12px; font-size: 14px; font-weight:bold;"></p>
-      <input type="text" id="customPromptInput" style="width: 100%; margin-bottom: 16px;">
-      <div style="display: flex; gap: 10px;">
-        <button id="customPromptCancel" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
-        <button id="customPromptOk" style="flex: 1;">OK</button>
-      </div>
-    </div>
-  </div>
-
 <script type="module">
   // ==========================================
   // Firebase SDK (v12.16.0) インポート
@@ -837,54 +900,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
   import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
-
-  // ==========================================
-  // ダイアログのオーバーライド (UIフリーズ対策)
-  // ==========================================
-  window.alert = function(msg) {
-    document.getElementById('customAlertMessage').innerHTML = String(msg).replace(/\n/g, '<br>');
-    document.getElementById('customAlertModal').classList.remove('hidden');
-  };
-
-  window.customConfirm = function(msg, onOk) {
-    document.getElementById('customConfirmMessage').innerHTML = String(msg).replace(/\n/g, '<br>');
-    const modal = document.getElementById('customConfirmModal');
-    const okBtn = document.getElementById('customConfirmOk');
-    const cancelBtn = document.getElementById('customConfirmCancel');
-    
-    const cleanUp = () => {
-      modal.classList.add('hidden');
-      okBtn.onclick = null;
-      cancelBtn.onclick = null;
-    };
-    
-    okBtn.onclick = () => { cleanUp(); onOk(); };
-    cancelBtn.onclick = () => { cleanUp(); };
-    
-    modal.classList.remove('hidden');
-  };
-
-  window.customPrompt = function(msg, defaultText, onOk, onCancel) {
-    document.getElementById('customPromptMessage').innerHTML = String(msg);
-    const input = document.getElementById('customPromptInput');
-    input.value = defaultText || "";
-    const modal = document.getElementById('customPromptModal');
-    const okBtn = document.getElementById('customPromptOk');
-    const cancelBtn = document.getElementById('customPromptCancel');
-    
-    const cleanUp = () => {
-      modal.classList.add('hidden');
-      okBtn.onclick = null;
-      cancelBtn.onclick = null;
-    };
-    
-    okBtn.onclick = () => { const val = input.value; cleanUp(); onOk(val); };
-    cancelBtn.onclick = () => { cleanUp(); if(onCancel) onCancel(); };
-    
-    modal.classList.remove('hidden');
-    setTimeout(() => input.focus(), 100);
-  };
-
 
   // ==========================================
   // Firebase設定
@@ -899,7 +914,7 @@
   let allExpenses = [];
   let allIncomes = [];
 
-  const APP_VERSION = "2026.09.04.v18"; 
+  const APP_VERSION = "2026.08.18.v17"; // バージョン管理用 (お知らせ制御用)
   const ADMIN_ID = "emoinjaa0";
 
   // ==========================================
@@ -909,14 +924,19 @@
   window.expenses = [];
   window.incomes = []; 
   
+  // ブック管理
   window.books = [{id: 'default', name: 'メイン'}];
   window.currentBookId = 'default';
 
-  const defaultCategories = ["食費(純)", "食費(雑)", "経費", "雑費", "税"];
+  // カテゴリ設定 (食費(雑)を外食と弁当に分割)
+  const defaultCategories = ["食費(純)", "食費(外食)", "食費(弁当)", "経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "雑費", "税"];
   window.userCategories = [...defaultCategories];
   window.aiAutoCategory = true;
+
+  // ポイント種類の管理
   window.pointTypes = [];
 
+  // グラフインスタンス
   window.doughnutChartInstance = null;
   window.tenDaysChartInstance = null;
   window.trendChartInstance = null;
@@ -929,11 +949,100 @@
   
   window.currentAnalysisMode = 'expense';
 
+  // さらに明るく鮮やかなパステルカラー
   const chartColors = ['#9ec2ae', '#bea6d4', '#d4c598', '#99afdb', '#db9a9a', '#9ed9d9', '#dbbc8a', '#ccaddb'];
   const barColors = ['#d4c598', '#9ec2ae', '#99afdb'];
   const incomeChartColors = ['#9ec2ae', '#a0b1d1', '#cc9db0', '#b0cc9d', '#a0a6d1'];
   const incomeBarColors = ['#9ec2ae', '#a0b1d1', '#cc9db0'];
 
+  // ★ API呼び出し時の503/429エラー対策用 (Exponential Backoff リトライ)
+  window.fetchWithRetry = async function(url, options = {}, maxRetries = 3) {
+    let delay = 1000;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+        // 正常、またはリトライ対象外のエラー（400番台など。ただし429はリトライ）ならすぐ返す
+        if (response.ok || (response.status !== 503 && response.status !== 429 && response.status !== 500 && response.status !== 502)) {
+          return response;
+        }
+        if (i === maxRetries - 1) return response; // 最後の試行ならそのまま返す
+      } catch (error) {
+        if (i === maxRetries - 1) throw error; // ネットワークエラー等の場合は最後にthrow
+      }
+      // コンソールには出さず、指定時間待機して再試行
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2; // 1秒 -> 2秒 -> 4秒...と待機時間を増やす
+    }
+  };
+
+  // ★ 過去の「経費」や「食費(雑)」カテゴリを自動で再分類する機能
+  window.migrateLegacyExpenses = async function(userId) {
+    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
+    if (!apiKey) return;
+
+    const legacyExpenses = window.expenses.filter(e => e.category === "経費" || e.category === "食費(雑)");
+    if (legacyExpenses.length === 0) return;
+
+    const targetModel = 'gemini-3.7-flash';
+    const payload = {
+      contents: [{
+        parts: [{ text: `以下の出費リストのカテゴリを再分類してください。
+・元が「経費」のもの -> 「経費(日用品)」「経費(交通費)」「経費(公共料金)」「経費(その他)」のいずれか
+・元が「食費(雑)」のもの -> 飲食店での食事は「食費(外食)」、中食・惣菜・弁当・飲み物等は「食費(弁当)」のいずれか
+データ: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: e.store, old_cat: e.category})))}` }]
+      }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0,
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            items: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  id: { type: "STRING" },
+                  category: { type: "STRING" }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    try {
+      const response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        const jsonText = result.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(jsonText);
+        
+        if (parsed.items) {
+          let updatedCount = 0;
+          const validNewCats = ["経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "食費(外食)", "食費(弁当)"];
+          for (const item of parsed.items) {
+            const exp = window.expenses.find(e => e.id === item.id);
+            if (exp && validNewCats.includes(item.category)) {
+              exp.category = item.category;
+              await fsSaveExpense(exp);
+              updatedCount++;
+            }
+          }
+          if (updatedCount > 0) window.updateUI();
+        }
+      }
+    } catch (e) {
+      console.warn("過去データの自動振り分けに失敗:", e);
+    }
+  };
+
+  // ==========================================
+  // ★ Firebase初期化 (プレビュー環境対応版)
+  // ==========================================
   try {
     let config;
     if (useEnvironmentFirebase) {
@@ -964,7 +1073,9 @@
   }
 
   function getCollectionPath(colName) {
-    if (useEnvironmentFirebase) return `artifacts/${appId}/public/data/${colName}`;
+    if (useEnvironmentFirebase) {
+      return `artifacts/${appId}/public/data/${colName}`;
+    }
     return colName;
   }
 
@@ -979,13 +1090,17 @@
         } else {
           await signInAnonymously(auth);
         }
-      } catch (e) { console.error("認証エラー:", e); }
+      } catch (e) { 
+        console.error("認証エラー:", e); 
+      }
     };
     initAuth();
 
     onAuthStateChanged(auth, (user) => {
       firebaseUser = user;
-      if (user) listenToFirestore();
+      if (user) {
+        listenToFirestore();
+      }
     });
   } else {
     allUsers = JSON.parse(localStorage.getItem('users_data') || '{}');
@@ -1004,8 +1119,9 @@
       allUsers = {};
       snapshot.forEach(d => { allUsers[d.id] = d.data(); });
     }, (err) => {
+        console.error("users同期エラー:", err);
         if (err.code === 'permission-denied' && !useEnvironmentFirebase) {
-            alert("Firebase権限エラーです。ルールをテストモードに変更してください。");
+            alert("Firebaseの権限エラーです。ご自身のFirebase ConsoleからFirestoreの「ルール」をテストモード(allow read, write: if true;)に変更してください。");
         }
     });
 
@@ -1013,18 +1129,20 @@
       allExpenses = [];
       snapshot.forEach(d => { allExpenses.push({ ...d.data(), id: d.id }); });
       refreshCurrentUserLocalData();
-    });
+    }, (err) => console.error("expenses同期エラー:", err));
 
     unsubIncomes = onSnapshot(getCollectionRef('incomes'), (snapshot) => {
       allIncomes = [];
       snapshot.forEach(d => { allIncomes.push({ ...d.data(), id: d.id }); });
       refreshCurrentUserLocalData();
-    });
+    }, (err) => console.error("incomes同期エラー:", err));
   }
 
+  // ヘルプデータの定義
   const helpData = {
     record: { title: '<span class="material-symbols-outlined">edit_document</span> 記録について', desc: "レシートや請求書をカメラで撮影してAIに自動入力させるか、手動で出費を記録する画面です。<br><br>※AIは自動で商品ごとの単価や税を計算し、適切なカテゴリに分類してくれます。カテゴリ設定は「設定」タブから変更可能です。" },
     income: { title: '<span class="material-symbols-outlined">payments</span> 収入について', desc: "給与や副業、お小遣い、フリマアプリの売上などの「収入」を記録する画面です。<br><br>記録した収入は、分析タブの『収入分析』でグラフ化され、推移を確認できます。" },
+    schedule: { title: '<span class="material-symbols-outlined">event_upcoming</span> 予定（クレカ・サブスク）について', desc: "来月引き落とされるクレジットカードの請求額を事前にメモしておいたり、毎月固定でかかるサブスクリプションを管理する画面です。<br><br>ここに登録した時点ではまだ家計簿の出費には加算されず、「出費に反映」ボタンを押したタイミングで実際の履歴に計上されます。" },
     swipe: { title: '<span class="material-symbols-outlined">cleaning_services</span> 整理について', desc: "記録した出費を一つずつ見直し、「必要だったか」「無駄だったか」を評価する画面です。<br><br>これを習慣づけることで、自分の無駄遣いの傾向に気づき、節約に繋がります。" },
     history: { title: '<span class="material-symbols-outlined">history</span> 履歴について', desc: "これまでの出費の履歴を日ごと・店ごとにまとめて確認できます。<br><br>間違えて登録してしまった場合も、各項目をタップすることで内容の修正や「削除」が行えます。" },
     analysis: { title: '<span class="material-symbols-outlined">bar_chart</span> 分析について', desc: "月ごとの収支内訳や、一年間の推移グラフを確認できる画面です。<br><br>AIの「診断する」ボタンを押すと、プロの経理目線であなたの家計の傾向や改善点をアドバイスしてくれます。" },
@@ -1054,53 +1172,69 @@
 
   async function fsSaveExpense(expense) {
     if (isCloudEnabled && firebaseUser) {
-      try { await setDoc(getDocRef('expenses', expense.id), expense); } catch(e) {}
+      try {
+        await setDoc(getDocRef('expenses', expense.id), expense);
+      } catch(e) {
+        console.error("保存失敗:", e);
+        alert("データの保存に失敗しました。Firebaseのルールを確認してください。");
+      }
     } else {
       const idx = window.expenses.findIndex(e => e.id === expense.id);
       if (idx > -1) window.expenses[idx] = expense; else window.expenses.push(expense);
+      // ローカル保存時は一旦全データを保存する処理
       const otherExps = allExpenses.filter(e => e.appUserId === window.currentUser && (e.bookId || 'default') !== window.currentBookId);
-      localStorage.setItem(`expenses_data_${window.currentUser}`, JSON.stringify([...otherExps, ...window.expenses]));
+      const toSave = [...otherExps, ...window.expenses];
+      localStorage.setItem(`expenses_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
   }
 
   async function fsDeleteExpense(id) {
     if (isCloudEnabled && firebaseUser) {
-      try { await deleteDoc(getDocRef('expenses', id)); } catch(e) {}
+      try { await deleteDoc(getDocRef('expenses', id)); } catch(e) { console.error("削除失敗:", e); }
     } else {
       window.expenses = window.expenses.filter(e => e.id !== id);
       const otherExps = allExpenses.filter(e => e.appUserId === window.currentUser && (e.bookId || 'default') !== window.currentBookId);
-      localStorage.setItem(`expenses_data_${window.currentUser}`, JSON.stringify([...otherExps, ...window.expenses]));
+      const toSave = [...otherExps, ...window.expenses];
+      localStorage.setItem(`expenses_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
   }
 
   async function fsSaveIncome(income) {
     if (isCloudEnabled && firebaseUser) {
-      try { await setDoc(getDocRef('incomes', income.id), income); } catch(e) {}
+      try {
+        await setDoc(getDocRef('incomes', income.id), income);
+      } catch(e) { console.error("保存失敗:", e); }
     } else {
       const idx = window.incomes.findIndex(i => i.id === income.id);
       if (idx > -1) window.incomes[idx] = income; else window.incomes.push(income);
       const otherIncs = allIncomes.filter(i => i.appUserId === window.currentUser && (i.bookId || 'default') !== window.currentBookId);
-      localStorage.setItem(`incomes_data_${window.currentUser}`, JSON.stringify([...otherIncs, ...window.incomes]));
+      const toSave = [...otherIncs, ...window.incomes];
+      localStorage.setItem(`incomes_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
   }
 
   async function fsDeleteIncome(id) {
     if (isCloudEnabled && firebaseUser) {
-      try { await deleteDoc(getDocRef('incomes', id)); } catch(e) {}
+      try { await deleteDoc(getDocRef('incomes', id)); } catch(e) { console.error("削除失敗:", e); }
     } else {
       window.incomes = window.incomes.filter(i => i.id !== id);
       const otherIncs = allIncomes.filter(i => i.appUserId === window.currentUser && (i.bookId || 'default') !== window.currentBookId);
-      localStorage.setItem(`incomes_data_${window.currentUser}`, JSON.stringify([...otherIncs, ...window.incomes]));
+      const toSave = [...otherIncs, ...window.incomes];
+      localStorage.setItem(`incomes_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
   }
 
   window.addEventListener('DOMContentLoaded', () => {
     const savedKey = localStorage.getItem('gemini_api_key');
-    if (savedKey) document.getElementById('apiKey').value = savedKey;
+    if (savedKey) {
+      document.getElementById('apiKey').value = savedKey;
+    } else {
+      document.getElementById('apiKey').value = '';
+    }
 
     const savedAuthId = localStorage.getItem('saved_auth_id');
     const savedAuthPin = localStorage.getItem('saved_auth_pin');
@@ -1110,9 +1244,216 @@
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('inputDate').value = today;
     document.getElementById('incomeDate').value = today;
+    if(document.getElementById('schedDate')) document.getElementById('schedDate').value = today;
+
+    const firstDay = today.substring(0, 8) + '01';
+    if(document.getElementById('customStartDate')) document.getElementById('customStartDate').value = firstDay;
+    if(document.getElementById('customEndDate')) document.getElementById('customEndDate').value = today;
 
     setTimeout(window.loadAuth, 800); 
   });
+
+  window.subscriptions = [];
+  window.scheduledPayments = [];
+
+  window.loadSchedules = function() {
+    if (!window.currentUser) return;
+    const savedSubs = localStorage.getItem(`subs_${window.currentUser}_${window.currentBookId}`);
+    window.subscriptions = savedSubs ? JSON.parse(savedSubs) : [];
+    
+    const savedSched = localStorage.getItem(`sched_${window.currentUser}_${window.currentBookId}`);
+    window.scheduledPayments = savedSched ? JSON.parse(savedSched) : [];
+    
+    window.renderSchedules();
+  };
+
+  window.saveSchedulesData = function() {
+    if (!window.currentUser) return;
+    localStorage.setItem(`subs_${window.currentUser}_${window.currentBookId}`, JSON.stringify(window.subscriptions));
+    localStorage.setItem(`sched_${window.currentUser}_${window.currentBookId}`, JSON.stringify(window.scheduledPayments));
+    window.renderSchedules();
+  };
+
+  window.saveScheduledPayment = function() {
+    const date = document.getElementById('schedDate').value;
+    const name = document.getElementById('schedName').value.trim();
+    const amount = parseInt(document.getElementById('schedAmount').value) || 0;
+    const category = document.getElementById('schedCategory').value;
+    const memo = document.getElementById('schedMemo').value.trim();
+
+    if (!date || !name || amount <= 0) return alert("支払予定日、内容、金額を正しく入力してください。");
+
+    window.scheduledPayments.push({
+      id: 'sched_' + Date.now(),
+      date: date,
+      name: name,
+      amount: amount,
+      category: category,
+      memo: memo
+    });
+
+    document.getElementById('schedName').value = '';
+    document.getElementById('schedAmount').value = '';
+    document.getElementById('schedMemo').value = '';
+    window.saveSchedulesData();
+    alert("支払予定リストに追加しました。");
+  };
+
+  window.reflectScheduledPayment = async function(id) {
+    const idx = window.scheduledPayments.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    const item = window.scheduledPayments[idx];
+
+    const expense = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      appUserId: window.currentUser,
+      bookId: window.currentBookId,
+      date: item.date,
+      store: "引き落とし・予定分",
+      name: item.name,
+      unit_price: item.amount,
+      qty: 1,
+      price: item.amount,
+      tax: 0,
+      category: item.category,
+      memo: item.memo || "予定リストから反映",
+      isNecessary: null
+    };
+
+    await fsSaveExpense(expense);
+    window.scheduledPayments.splice(idx, 1);
+    window.saveSchedulesData();
+    alert(`「${item.name}」を出費履歴に反映しました！`);
+  };
+
+  window.deleteScheduledPayment = function(id) {
+    if (!confirm("この支払予定を削除しますか？")) return;
+    window.scheduledPayments = window.scheduledPayments.filter(s => s.id !== id);
+    window.saveSchedulesData();
+  };
+
+  window.saveSubscription = function() {
+    const day = document.getElementById('subDay').value;
+    const name = document.getElementById('subName').value.trim();
+    const amount = parseInt(document.getElementById('subAmount').value) || 0;
+    const category = document.getElementById('subCategory').value;
+
+    if (!name || amount <= 0) return alert("サービス名と月額料金を入力してください。");
+
+    window.subscriptions.push({
+      id: 'sub_' + Date.now(),
+      day: parseInt(day),
+      name: name,
+      amount: amount,
+      category: category,
+      lastReflectedMonth: ""
+    });
+
+    document.getElementById('subName').value = '';
+    document.getElementById('subAmount').value = '';
+    window.saveSchedulesData();
+  };
+
+  window.reflectSubscription = async function(id) {
+    const sub = window.subscriptions.find(s => s.id === id);
+    if (!sub) return;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    let day = sub.day;
+    if (day === 99) {
+      day = new Date(year, now.getMonth() + 1, 0).getDate();
+    }
+    const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
+
+    const expense = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      appUserId: window.currentUser,
+      bookId: window.currentBookId,
+      date: dateStr,
+      store: "サブスク自動計上",
+      name: sub.name,
+      unit_price: sub.amount,
+      qty: 1,
+      price: sub.amount,
+      tax: 0,
+      category: sub.category,
+      memo: "月額サブスクリプション",
+      isNecessary: null
+    };
+
+    await fsSaveExpense(expense);
+    sub.lastReflectedMonth = `${year}-${month}`;
+    window.saveSchedulesData();
+    alert(`今月分の「${sub.name}」を出費履歴に記録しました！`);
+  };
+
+  window.deleteSubscription = function(id) {
+    if (!confirm("このサブスク登録を解除しますか？")) return;
+    window.subscriptions = window.subscriptions.filter(s => s.id !== id);
+    window.saveSchedulesData();
+  };
+
+  window.renderSchedules = function() {
+    const schedList = document.getElementById('scheduledPaymentList');
+    if (schedList) {
+      if (window.scheduledPayments.length === 0) {
+        schedList.innerHTML = '<p style="color:#888; font-size:12px;">予定されている支払いはありません</p>';
+      } else {
+        window.scheduledPayments.sort((a, b) => a.date.localeCompare(b.date));
+        schedList.innerHTML = window.scheduledPayments.map(item => `
+          <div style="border-bottom: 1px solid #f0f0f0; padding: 12px 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:12px; color:var(--red-text); font-weight:bold;">支払日: ${item.date}</div>
+              <div style="font-weight:bold; font-size:14px; margin: 2px 0;">${item.name}</div>
+              <div style="font-size:11px; color:#888;">${item.category} ${item.memo ? `• ${item.memo}` : ''}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:bold; font-size:16px; margin-bottom:6px;">¥${item.amount.toLocaleString()}</div>
+              <div style="display:flex; gap:6px;">
+                <button onclick="reflectScheduledPayment('${item.id}')" style="padding:4px 8px; font-size:11px;">出費に反映</button>
+                <button onclick="deleteScheduledPayment('${item.id}')" class="outline" style="padding:4px 8px; font-size:11px; border-color:#ccc; color:#666;">削除</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    const subList = document.getElementById('subscriptionList');
+    if (subList) {
+      if (window.subscriptions.length === 0) {
+        subList.innerHTML = '<p style="color:#888; font-size:12px;">登録されているサブスクはありません</p>';
+      } else {
+        const currentYearMonth = new Date().toISOString().substring(0, 7);
+        window.subscriptions.sort((a, b) => a.day - b.day);
+        subList.innerHTML = window.subscriptions.map(sub => {
+          const isDoneThisMonth = sub.lastReflectedMonth === currentYearMonth;
+          const dayText = sub.day === 99 ? "月末" : `${sub.day}日`;
+          return `
+            <div style="border-bottom: 1px solid #f0f0f0; padding: 12px 0; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-size:12px; color:#666;">毎月 ${dayText}</div>
+                <div style="font-weight:bold; font-size:14px; margin: 2px 0;">${sub.name}</div>
+                <div style="font-size:11px; color:#888;">${sub.category}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:bold; font-size:16px; margin-bottom:6px;">¥${sub.amount.toLocaleString()}/月</div>
+                <div style="display:flex; gap:6px; justify-content:flex-end;">
+                  ${isDoneThisMonth 
+                    ? `<span style="font-size:11px; color:var(--green-text); background:var(--pale-green); padding:4px 8px; border-radius:4px;">今月計上済</span>` 
+                    : `<button onclick="reflectSubscription('${sub.id}')" style="padding:4px 8px; font-size:11px;">今月分を計上</button>`
+                  }
+                  <button onclick="deleteSubscription('${sub.id}')" class="outline" style="padding:4px 8px; font-size:11px; border-color:#ccc; color:#666;">解除</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  };
 
   window.loadAuth = function() {
     const savedUser = localStorage.getItem('current_user');
@@ -1124,13 +1465,21 @@
       document.getElementById('bookTabsContainer').classList.remove('hidden');
       document.getElementById('displayUserId').innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; margin-right:4px;">person</span> ${window.currentUser}`;
       
-      window.loadBooks();
-      window.loadPointTypes();
+      window.loadBooks(); // ブックのロード＆カテゴリ設定の読み込み
+      window.loadPointTypes(); // ポイント設定読み込み
       window.checkAdmin();
       window.loadUserData();
       window.migrateLocalToCloudIfNeeded(window.currentUser);
       window.checkNotification();
-      window.restoreApiKey();
+      
+      window.restoreApiKey().then(() => {
+        // APIキーが復元された後、アプリの起動が落ち着いてから(10秒後)にマイグレーションを実行し、サーバー負荷を分散
+        setTimeout(() => {
+          if (window.currentUser) {
+            window.migrateLegacyExpenses(window.currentUser); 
+          }
+        }, 10000);
+      });
     } else {
       document.getElementById('authView').classList.remove('hidden');
       document.getElementById('appView').classList.add('hidden');
@@ -1139,6 +1488,7 @@
     }
   };
 
+  // --- お知らせ（ベルマーク）処理 ---
   window.checkNotification = function() {
     if (window.currentUser === ADMIN_ID) return;
     const seenVersion = localStorage.getItem('seen_notification_version');
@@ -1163,23 +1513,30 @@
     
     document.getElementById('notificationContent').innerHTML = `
       <ul style="margin:0; padding-left:20px; font-size:13px; color:#444; line-height:1.6;">
-        <li><b>AI精度UP＆高速化:</b> 解析モデルをgemini-3.8-flashにアップデート。処理が高速になり、数字と内税の認識精度がアップしました！</li>
-        <li><b>ソート順の改善:</b> 全ての履歴が新しい順に表示されるようになりました。</li>
-        <li><b>収入機能の修正:</b> 収入の記録ができなかった不具合を改修しました。</li>
+        <li><b>分類精度の向上:</b> AIがレシート等の情報から正確にカテゴリ分けする精度が向上しました。</li>
+        <li><b>処理の高速化:</b> 解析処理の待機時間を大幅にカットしました。</li>
       </ul>
     `;
     document.getElementById('notificationModal').classList.remove('hidden');
   };
 
-  window.closeNotification = function() { document.getElementById('notificationModal').classList.add('hidden'); };
+  window.closeNotification = function() {
+    document.getElementById('notificationModal').classList.add('hidden');
+  };
 
+  // --- ポイント種類管理 ---
   window.loadPointTypes = function() {
     const saved = localStorage.getItem(`point_types_${window.currentUser}`);
-    if (saved) { try { window.pointTypes = JSON.parse(saved); } catch(e){} }
-    else window.pointTypes = ["PayPay", "楽天ポイント", "dポイント"];
+    if (saved) {
+      try { window.pointTypes = JSON.parse(saved); } catch(e){}
+    } else {
+      window.pointTypes = ["PayPay", "楽天ポイント", "dポイント"];
+    }
   };
   
-  window.savePointTypes = function() { localStorage.setItem(`point_types_${window.currentUser}`, JSON.stringify(window.pointTypes)); };
+  window.savePointTypes = function() {
+    localStorage.setItem(`point_types_${window.currentUser}`, JSON.stringify(window.pointTypes));
+  };
 
   window.updatePointTypeSelect = function() {
     const select = document.getElementById('ocrPointType');
@@ -1194,20 +1551,22 @@
 
   window.handlePointTypeChange = function(select) {
     if (select.value === 'NEW') {
-      window.customPrompt("新しいポイントの種類を入力してください", "", (newPt) => {
-        if (newPt && newPt.trim()) {
-          const val = newPt.trim();
-          if (!window.pointTypes.includes(val)) {
-            window.pointTypes.push(val);
-            window.savePointTypes();
-          }
-          window.updatePointTypeSelect();
-          select.value = val;
-        } else { select.value = ''; }
-      }, () => { select.value = ''; });
+      const newPt = prompt("新しいポイントの種類を入力してください");
+      if (newPt && newPt.trim()) {
+        const val = newPt.trim();
+        if (!window.pointTypes.includes(val)) {
+          window.pointTypes.push(val);
+          window.savePointTypes();
+        }
+        window.updatePointTypeSelect();
+        select.value = val;
+      } else {
+        select.value = '';
+      }
     }
   };
 
+  // --- 汎用コンテキストメニュー制御 ---
   window.showContextMenu = function(targetElement, items) {
     const menu = document.getElementById('contextMenu');
     menu.innerHTML = items.map(item => `
@@ -1222,36 +1581,63 @@
     menu.classList.remove('hidden');
   };
 
-  window.closeContextMenu = function() { const menu = document.getElementById('contextMenu'); if(menu) menu.classList.add('hidden'); };
+  window.closeContextMenu = function() {
+    const menu = document.getElementById('contextMenu');
+    if(menu) menu.classList.add('hidden');
+  };
 
   document.addEventListener('pointerdown', function(e) {
     const menu = document.getElementById('contextMenu');
     if (menu && !menu.classList.contains('hidden')) {
-      if (!menu.contains(e.target) && !e.target.closest('[data-context-target="true"]')) menu.classList.add('hidden');
+      if (!menu.contains(e.target) && !e.target.closest('[data-context-target="true"]')) {
+        menu.classList.add('hidden');
+      }
     }
   });
 
-  window.dragState = { active: false, timer: null, el: null, clone: null, type: '', index: -1, id: null, startX: 0, startY: 0, shiftX: 0, shiftY: 0 };
+
+  // --- ドラッグ＆ドロップ（Pointer Events実装） ---
+  window.dragState = {
+    active: false,
+    timer: null,
+    el: null,
+    clone: null,
+    type: '',
+    index: -1,
+    id: null,
+    startX: 0,
+    startY: 0,
+    shiftX: 0,
+    shiftY: 0
+  };
 
   window.initDrag = function(e, type, index, id) {
-    if (e.button !== undefined && e.button !== 0) return;
+    if (e.button !== undefined && e.button !== 0) return; // 左クリックのみ
+
+    // 既存のタイマーをクリア
     if (window.dragState.timer) clearTimeout(window.dragState.timer);
 
     window.dragState = {
       active: false,
       el: e.currentTarget.closest('.settings-item') || e.currentTarget.closest('.book-tab'),
-      type: type, index: index, id: id,
+      type: type,
+      index: index,
+      id: id,
       startX: e.clientX || e.touches?.[0].clientX,
       startY: e.clientY || e.touches?.[0].clientY,
-      shiftX: 0, shiftY: 0
+      shiftX: 0,
+      shiftY: 0
     };
+
     if (!window.dragState.el) return;
 
     const rect = window.dragState.el.getBoundingClientRect();
     window.dragState.shiftX = window.dragState.startX - rect.left;
     window.dragState.shiftY = window.dragState.startY - rect.top;
 
-    window.dragState.timer = setTimeout(() => { startCustomDrag(); }, 200);
+    window.dragState.timer = setTimeout(() => {
+      startCustomDrag();
+    }, 200); // 200ms長押しでドラッグ開始
 
     document.addEventListener('pointermove', onCustomDragMove, {passive: false});
     document.addEventListener('pointerup', onCustomDragEnd);
@@ -1261,6 +1647,8 @@
     const state = window.dragState;
     if (!state.el) return;
     state.active = true;
+    
+    // 他のメニューが開いていれば閉じる
     window.closeContextMenu();
     
     const rect = state.el.getBoundingClientRect();
@@ -1276,23 +1664,32 @@
     state.clone.style.pointerEvents = 'none';
     state.clone.style.margin = '0';
     state.clone.style.transform = 'scale(1.02)';
+    state.clone.style.transition = 'none';
     document.body.appendChild(state.clone);
+
     state.el.style.opacity = '0.2';
   }
 
   function onCustomDragMove(e) {
     const state = window.dragState;
     if (!state.el) return;
+
     const currentX = e.clientX || e.touches?.[0].clientX;
     const currentY = e.clientY || e.touches?.[0].clientY;
 
     if (!state.active) {
-      if (Math.abs(currentX - state.startX) > 8 || Math.abs(currentY - state.startY) > 8) {
-        clearTimeout(state.timer); startCustomDrag();
-      } else return;
+      const dx = Math.abs(currentX - state.startX);
+      const dy = Math.abs(currentY - state.startY);
+      if (dx > 8 || dy > 8) {
+        clearTimeout(state.timer);
+        startCustomDrag(); // 閾値を超えたらドラッグ開始
+      } else {
+        return;
+      }
     }
 
     e.preventDefault();
+
     state.clone.style.left = (currentX - state.shiftX) + 'px';
     state.clone.style.top = (currentY - state.shiftY) + 'px';
 
@@ -1306,9 +1703,19 @@
     if (dropTarget && dropTarget !== state.el) {
       const container = state.el.parentNode;
       const targetRect = dropTarget.getBoundingClientRect();
-      const isNext = state.type === 'bookTab' ? (currentX > targetRect.left + targetRect.width / 2) : (currentY > targetRect.top + targetRect.height / 2);
-      if (isNext) container.insertBefore(state.el, dropTarget.nextSibling);
-      else container.insertBefore(state.el, dropTarget);
+      
+      let isNext = false;
+      if (state.type === 'bookTab') {
+        isNext = (currentX > targetRect.left + targetRect.width / 2);
+      } else {
+        isNext = (currentY > targetRect.top + targetRect.height / 2);
+      }
+      
+      if (isNext) {
+        container.insertBefore(state.el, dropTarget.nextSibling);
+      } else {
+        container.insertBefore(state.el, dropTarget);
+      }
     }
   }
 
@@ -1323,7 +1730,10 @@
       if (state.el) state.el.style.opacity = '1';
       applyReorderFromDOM(state.type);
     } else {
-      if (state.type === 'bookTab') handleCustomTap(state.type, state.index, state.id, e);
+      // ドラッグせずに離した場合はタップとして扱う
+      if (state.type === 'bookTab') {
+        handleCustomTap(state.type, state.index, state.id, e);
+      }
     }
     window.dragState = { active: false, el: null };
   }
@@ -1332,12 +1742,23 @@
     if (type === 'bookTab' || type === 'bookSetting') {
       const container = type === 'bookTab' ? document.getElementById('bookTabsContainer') : document.getElementById('bookSettingList');
       const newOrderIds = Array.from(container.querySelectorAll('[data-drag-id]')).map(el => el.getAttribute('data-drag-id'));
-      const newBooks = newOrderIds.map(id => window.books.find(x => x.id === id)).filter(Boolean);
-      if (newBooks.length === window.books.length) { window.books = newBooks; window.saveBooks(); }
+      
+      const newBooks = [];
+      newOrderIds.forEach(id => {
+        const b = window.books.find(x => x.id === id);
+        if (b) newBooks.push(b);
+      });
+      if (newBooks.length === window.books.length) {
+        window.books = newBooks;
+        window.saveBooks();
+      }
     } else if (type === 'categorySetting') {
       const container = document.getElementById('categorySettingList');
       const newCats = Array.from(container.querySelectorAll('[data-cat-name]')).map(el => el.getAttribute('data-cat-name'));
-      if (newCats.length === window.userCategories.length) { window.userCategories = newCats; window.saveUserSettings(); }
+      if (newCats.length === window.userCategories.length) {
+        window.userCategories = newCats;
+        window.saveUserSettings();
+      }
     }
   }
 
@@ -1348,7 +1769,9 @@
           { label: '名前を変更', icon: 'edit', action: `promptRenameBook('${id}')` },
           { label: '削除', icon: 'delete', color: 'var(--red-text)', action: `confirmDeleteBook('${id}')` }
         ]);
-      } else window.switchBook(id);
+      } else {
+        window.switchBook(id);
+      }
     }
   }
 
@@ -1365,51 +1788,51 @@
     }
   };
 
+  // --- ヘルパー関数 ---
   window.promptRenameBook = function(id) {
     const book = window.books.find(b => b.id === id);
     if (book) {
-      window.customPrompt("新しいブック名を入力してください", book.name, (newName) => {
-        if(newName && newName.trim()) window.renameBook(id, newName);
-      });
+      const newName = prompt("新しいブック名を入力してください", book.name);
+      if(newName && newName.trim()) {
+        window.renameBook(id, newName);
+      }
     }
   };
 
   window.confirmDeleteBook = function(id) {
-    if (id === 'default') return alert("基本ブックは削除できません。");
-    window.customConfirm("このブックと、ブック内の全データを削除しますか？\nこの操作は取り消せません。", async () => {
-      const exps = allExpenses.filter(e => e.appUserId === window.currentUser && (e.bookId || 'default') === id);
-      for (const e of exps) await fsDeleteExpense(e.id);
-      const incs = allIncomes.filter(i => i.appUserId === window.currentUser && (i.bookId || 'default') === id);
-      for (const i of incs) await fsDeleteIncome(i.id);
-      window.books = window.books.filter(b => b.id !== id);
-      if(window.currentBookId === id) window.currentBookId = 'default';
-      window.saveBooks();
-      window.switchBook(window.currentBookId);
-    });
+    if (id === 'default') {
+      alert("基本ブックは削除できません。");
+      return;
+    }
+    window.deleteBook(id);
   };
 
   window.confirmDeleteCategory = function(catName) {
     const index = window.userCategories.indexOf(catName);
     if (index > -1) {
-      if (window.userCategories.length <= 1) return alert("カテゴリは最低1つ必要です。");
-      window.customConfirm(`カテゴリ「${catName}」を削除しますか？\n既存データは残りますが、新規登録の選択肢から消えます。`, () => {
-        window.userCategories.splice(index, 1);
-        window.saveUserSettings();
-        window.renderCategorySettings();
-      });
+      window.deleteCustomCategory(index);
     }
   };
 
+
+  // --- ブック管理ロジック ---
   window.loadBooks = function() {
     const savedBooks = localStorage.getItem(`books_${window.currentUser}`);
-    if (savedBooks) { try { window.books = JSON.parse(savedBooks); } catch(e){} }
-    else window.books = [{id: 'default', name: 'メイン'}];
+    if (savedBooks) {
+      try { window.books = JSON.parse(savedBooks); } catch(e){}
+    } else {
+      window.books = [{id: 'default', name: 'メイン'}];
+    }
     const savedCurrent = localStorage.getItem(`currentBookId_${window.currentUser}`);
-    if (savedCurrent && window.books.find(b => b.id === savedCurrent)) window.currentBookId = savedCurrent;
-    else window.currentBookId = window.books[0].id;
+    if (savedCurrent && window.books.find(b => b.id === savedCurrent)) {
+      window.currentBookId = savedCurrent;
+    } else {
+      window.currentBookId = window.books[0].id;
+    }
     window.renderBookTabs();
     window.renderBookSettings();
     window.loadUserSettings();
+    if(typeof window.loadSchedules === 'function') window.loadSchedules();
   };
 
   window.saveBooks = function() {
@@ -1426,34 +1849,44 @@
     localStorage.setItem(`currentBookId_${window.currentUser}`, window.currentBookId);
     window.renderBookTabs();
     window.loadUserSettings(); 
+    if(typeof window.loadSchedules === 'function') window.loadSchedules();
     refreshCurrentUserLocalData();
   };
 
   window.renderBookTabs = function() {
     const container = document.getElementById('bookTabsContainer');
     if(!container) return;
+    
     let html = window.books.map((b, index) => `
       <div class="book-tab ${b.id === window.currentBookId ? 'active' : ''}" 
            data-drag-type="bookTab" data-drag-index="${index}" data-drag-id="${b.id}" data-context-target="true"
-           onpointerdown="initDrag(event, 'bookTab', ${index}, '${b.id}')" style="touch-action: none;">
+           onpointerdown="initDrag(event, 'bookTab', ${index}, '${b.id}')"
+           style="touch-action: none;">
         ${b.name}
       </div>
     `).join('');
+    
     if (window.books.length < 3) {
       html += `
         <div class="book-tab-add" title="ブックを追加" onclick="promptAddBook()">
           <span class="material-symbols-outlined" style="font-size: 20px;">add</span>
           <span class="material-symbols-outlined help-icon" onclick="event.stopPropagation(); showHelp('book')" style="width:20px; height:20px; font-size:14px; margin-left:4px; padding:0; background:transparent; border:none;" title="ブック管理について">help</span>
-        </div>`;
+        </div>
+      `;
     }
     container.innerHTML = html;
   };
 
   window.promptAddBook = function() {
-    if (window.books.length >= 3) return alert("ブックは最大3つまでです。");
-    window.customPrompt("新しいブック名を入力してください", "", (val) => {
-      if (val && val.trim()) { window.books.push({id: 'book_' + Date.now(), name: val.trim()}); window.saveBooks(); }
-    });
+    if (window.books.length >= 3) {
+      alert("ブックは最大3つまでです。");
+      return;
+    }
+    const val = prompt("新しいブック名を入力してください");
+    if (val && val.trim()) {
+      window.books.push({id: 'book_' + Date.now(), name: val.trim()});
+      window.saveBooks();
+    }
   };
 
   window.renderBookSettings = function() {
@@ -1462,18 +1895,27 @@
     list.innerHTML = window.books.map((b, i) => `
       <div class="settings-item" data-drag-type="bookSetting" data-drag-index="${i}" data-drag-id="${b.id}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:${i === window.books.length - 1 ? 'none' : '1px solid var(--border-color)'}; background: #fff;">
         <div style="flex:1; cursor:pointer; padding: 4px 0;" data-context-target="true" onclick="handleSettingItemTap(event, 'book', '${b.id}')">
-          ${b.id === 'default' ? `<span style="font-size:14px; color:var(--primary); font-weight:bold;">${b.name} <span style="font-size:11px;color:#999;font-weight:normal;">(基本)</span></span>` : `<span style="font-size:14px;">${b.name}</span>`}
+          ${b.id === 'default' 
+            ? `<span style="font-size:14px; color:var(--primary); font-weight:bold;">${b.name} <span style="font-size:11px;color:#999;font-weight:normal;">(基本)</span></span>` 
+            : `<span style="font-size:14px;">${b.name}</span>`
+          }
         </div>
-        <span class="material-symbols-outlined drag-handle" onpointerdown="initDrag(event, 'bookSetting', ${i}, '${b.id}')" style="touch-action: none; cursor: grab; color: #bbb; padding: 4px;">drag_handle</span>
+        <span class="material-symbols-outlined drag-handle" 
+              onpointerdown="initDrag(event, 'bookSetting', ${i}, '${b.id}')"
+              style="touch-action: none; cursor: grab; color: #bbb; padding: 4px;">drag_handle</span>
       </div>
     `).join('');
     
     const addBtn = document.getElementById('addBookBtn');
     const addInput = document.getElementById('newBookInput');
     if(window.books.length >= 3) {
-      addBtn.disabled = true; addInput.disabled = true; addInput.placeholder = "最大3つまでです";
+      addBtn.disabled = true;
+      addInput.disabled = true;
+      addInput.placeholder = "最大3つまでです";
     } else {
-      addBtn.disabled = false; addInput.disabled = false; addInput.placeholder = "新しいブック名";
+      addBtn.disabled = false;
+      addInput.disabled = false;
+      addInput.placeholder = "新しいブック名";
     }
   };
 
@@ -1488,30 +1930,86 @@
 
   window.renameBook = function(id, newName) {
     const book = window.books.find(b => b.id === id);
-    if(book && newName.trim()) { book.name = newName.trim(); window.saveBooks(); }
+    if(book && newName.trim()) {
+      book.name = newName.trim();
+      window.saveBooks();
+    }
   };
+
+  window.deleteBook = async function(id) {
+    if(id === 'default') return;
+    if(confirm("このブックと、ブック内の全データを削除しますか？\nこの操作は取り消せません。")) {
+      const exps = allExpenses.filter(e => e.appUserId === window.currentUser && (e.bookId || 'default') === id);
+      for (const e of exps) await fsDeleteExpense(e.id);
+      const incs = allIncomes.filter(i => i.appUserId === window.currentUser && (i.bookId || 'default') === id);
+      for (const i of incs) await fsDeleteIncome(i.id);
+      
+      window.books = window.books.filter(b => b.id !== id);
+      if(window.currentBookId === id) window.currentBookId = 'default';
+      window.saveBooks();
+      window.switchBook(window.currentBookId);
+    }
+  };
+  // --- ブック管理ここまで ---
+
 
   window.migrateLocalToCloudIfNeeded = async function(userId) {
     if (!isCloudEnabled || !firebaseUser) return;
     const localExp = localStorage.getItem(`expenses_data_${userId}`);
     if (localExp) {
-      for (const e of JSON.parse(localExp)) { e.appUserId = userId; if(!e.bookId) e.bookId = 'default'; await fsSaveExpense(e); }
+      const arr = JSON.parse(localExp);
+      for (const e of arr) { 
+        e.appUserId = userId; 
+        if(!e.bookId) e.bookId = 'default';
+        await fsSaveExpense(e); 
+      }
       localStorage.removeItem(`expenses_data_${userId}`);
     }
     const localInc = localStorage.getItem(`incomes_data_${userId}`);
     if (localInc) {
-      for (const i of JSON.parse(localInc)) { i.appUserId = userId; if(!i.bookId) i.bookId = 'default'; await fsSaveIncome(i); }
+      const arr = JSON.parse(localInc);
+      for (const i of arr) { 
+        i.appUserId = userId; 
+        if(!i.bookId) i.bookId = 'default';
+        await fsSaveIncome(i); 
+      }
       localStorage.removeItem(`incomes_data_${userId}`);
     }
   };
 
   window.loadUserSettings = function() {
     const savedCats = localStorage.getItem(`custom_categories_${window.currentUser}_${window.currentBookId}`);
-    if (savedCats) { try { window.userCategories = JSON.parse(savedCats); } catch(e){} }
-    else window.userCategories = [...defaultCategories];
+    if (savedCats) {
+      try { 
+        window.userCategories = JSON.parse(savedCats); 
+        let catUpdated = false;
+        // 過去の「経費」設定を新しい4つに置き換え
+        if (window.userCategories.includes("経費")) {
+          window.userCategories = window.userCategories.filter(c => c !== "経費");
+          ["経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)"].forEach(c => {
+            if (!window.userCategories.includes(c)) window.userCategories.push(c);
+          });
+          catUpdated = true;
+        }
+        // 過去の「食費(雑)」設定を「食費(外食)」「食費(弁当)」に置き換え
+        if (window.userCategories.includes("食費(雑)")) {
+          const idx = window.userCategories.indexOf("食費(雑)");
+          window.userCategories.splice(idx, 1, "食費(外食)", "食費(弁当)");
+          window.userCategories = [...new Set(window.userCategories)];
+          catUpdated = true;
+        }
+        if (catUpdated) window.saveUserSettings();
+      } catch(e){}
+    } else {
+      window.userCategories = [...defaultCategories];
+    }
     
     const savedAiOpt = localStorage.getItem(`ai_auto_category_${window.currentUser}_${window.currentBookId}`);
-    window.aiAutoCategory = savedAiOpt !== null ? savedAiOpt === 'true' : true;
+    if (savedAiOpt !== null) {
+      window.aiAutoCategory = savedAiOpt === 'true';
+    } else {
+      window.aiAutoCategory = true;
+    }
     
     document.getElementById('aiAutoCategoryCheck').checked = window.aiAutoCategory;
     window.renderCategorySettings();
@@ -1533,7 +2031,9 @@
         <div style="flex:1; cursor:pointer; padding: 4px 0;" data-context-target="true" onclick="handleSettingItemTap(event, 'category', '${cat}')">
           <span style="font-size:14px;">${cat}</span>
         </div>
-        <span class="material-symbols-outlined drag-handle" onpointerdown="initDrag(event, 'categorySetting', ${index}, '${cat}')" style="touch-action: none; cursor: grab; color: #bbb; padding: 4px;">drag_handle</span>
+        <span class="material-symbols-outlined drag-handle" 
+              onpointerdown="initDrag(event, 'categorySetting', ${index}, '${cat}')"
+              style="touch-action: none; cursor: grab; color: #bbb; padding: 4px;">drag_handle</span>
       </li>
     `).join('');
   };
@@ -1543,10 +2043,21 @@
     const val = input.value.trim();
     if (!val) return;
     if (window.userCategories.includes(val)) return alert("そのカテゴリは既に存在します。");
+    
     window.userCategories.push(val);
     input.value = '';
     window.saveUserSettings();
     window.renderCategorySettings();
+  };
+
+  window.deleteCustomCategory = function(index) {
+    if (window.userCategories.length <= 1) return alert("カテゴリは最低1つ必要です。");
+    const catName = window.userCategories[index];
+    if (confirm(`カテゴリ「${catName}」を削除しますか？\n既存のデータはそのまま残りますが、新規登録の選択肢からは消えます。`)) {
+      window.userCategories.splice(index, 1);
+      window.saveUserSettings();
+      window.renderCategorySettings();
+    }
   };
 
   window.toggleAiAutoCategory = function() {
@@ -1556,19 +2067,44 @@
 
   window.updateCategorySelects = function() {
     const opts = window.userCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-    ['inputCategory', 'editCategory'].forEach(id => {
-      const select = document.getElementById(id);
-      if(select) { const val = select.value; select.innerHTML = opts; if (val && window.userCategories.includes(val)) select.value = val; }
-    });
+    const inputSelect = document.getElementById('inputCategory');
+    const editSelect = document.getElementById('editCategory');
     const bulkSelect = document.getElementById('bulkEditCategory');
-    if (bulkSelect) bulkSelect.innerHTML = '<option value="">---</option>' + opts;
+    const schedSelect = document.getElementById('schedCategory');
+    const subSelect = document.getElementById('subCategory');
+    
+    if (inputSelect) {
+      const val = inputSelect.value;
+      inputSelect.innerHTML = opts;
+      if (val && window.userCategories.includes(val)) inputSelect.value = val;
+    }
+    if (editSelect) {
+      const val = editSelect.value;
+      editSelect.innerHTML = opts;
+      if (val && window.userCategories.includes(val)) editSelect.value = val;
+    }
+    if (bulkSelect) {
+      bulkSelect.innerHTML = '<option value="">---</option>' + opts;
+    }
+    if (schedSelect) {
+      const val = schedSelect.value;
+      schedSelect.innerHTML = opts;
+      if (val && window.userCategories.includes(val)) schedSelect.value = val;
+    }
+    if (subSelect) {
+      const val = subSelect.value;
+      subSelect.innerHTML = opts;
+      if (val && window.userCategories.includes(val)) subSelect.value = val;
+    }
   };
 
   function saveCredentialsIfChecked(id, pin) {
     if (document.getElementById('rememberMe').checked) {
-      localStorage.setItem('saved_auth_id', id); localStorage.setItem('saved_auth_pin', pin);
+      localStorage.setItem('saved_auth_id', id);
+      localStorage.setItem('saved_auth_pin', pin);
     } else {
-      localStorage.removeItem('saved_auth_id'); localStorage.removeItem('saved_auth_pin');
+      localStorage.removeItem('saved_auth_id');
+      localStorage.removeItem('saved_auth_pin');
     }
   }
 
@@ -1581,16 +2117,23 @@
       try {
         const userRef = getDocRef('users', id);
         const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) return alert("そのIDは既に他の人に登録されています。別のIDを指定してください。");
+        if (userSnap.exists()) {
+          return alert("そのIDは既に他の人に登録されています。別のIDを指定してください。");
+        }
         await setDoc(userRef, { pin: pin });
-      } catch (e) { return alert("通信エラーが発生しました。"); }
+      } catch (e) {
+        console.error("登録エラー:", e);
+        return alert("通信エラーが発生しました。");
+      }
     } else {
       if (allUsers[id]) return alert("そのIDは既に登録されています。");
-      allUsers[id] = { pin: pin }; localStorage.setItem('users_data', JSON.stringify(allUsers));
+      allUsers[id] = { pin: pin };
+      localStorage.setItem('users_data', JSON.stringify(allUsers));
     }
     
     alert("新規登録に成功しました！");
-    saveCredentialsIfChecked(id, pin); window.loginWith(id);
+    saveCredentialsIfChecked(id, pin);
+    window.loginWith(id);
   };
 
   window.login = async function() {
@@ -1602,37 +2145,49 @@
       try {
         const userRef = getDocRef('users', id);
         const userSnap = await getDoc(userRef);
-        if (!userSnap.exists() || userSnap.data().pin !== pin) return alert("IDまたはPINコードが一致しません。");
-      } catch (e) { return alert("通信エラーが発生しました。"); }
+        if (!userSnap.exists() || userSnap.data().pin !== pin) {
+          return alert("IDまたはPINコードが一致しません。");
+        }
+      } catch (e) {
+        console.error("ログインエラー:", e);
+        return alert("通信エラーが発生しました。");
+      }
     } else {
       if (!allUsers[id] || allUsers[id].pin !== pin) return alert("IDまたはPINコードが一致しません。");
     }
     
-    saveCredentialsIfChecked(id, pin); window.loginWith(id);
+    saveCredentialsIfChecked(id, pin);
+    window.loginWith(id);
   };
 
   window.loginWith = function(id) {
-    window.currentUser = id; localStorage.setItem('current_user', id);
+    window.currentUser = id;
+    localStorage.setItem('current_user', id);
     document.getElementById('authId').value = localStorage.getItem('saved_auth_id') || '';
     document.getElementById('authPin').value = localStorage.getItem('saved_auth_pin') || '';
     window.loadAuth();
   };
 
   window.logout = function() {
-    window.currentUser = null; localStorage.removeItem('current_user');
-    window.expenses = []; window.incomes = [];
-    window.books = [{id: 'default', name: 'メイン'}]; window.currentBookId = 'default';
+    window.currentUser = null;
+    localStorage.removeItem('current_user');
+    window.expenses = [];
+    window.incomes = [];
+    window.books = [{id: 'default', name: 'メイン'}];
+    window.currentBookId = 'default';
     
     const savedId = localStorage.getItem('saved_auth_id');
     const savedPin = localStorage.getItem('saved_auth_pin');
     if (savedId) document.getElementById('authId').value = savedId;
     if (savedPin) document.getElementById('authPin').value = savedPin;
+
     window.loadAuth();
   };
 
   window.updateCredentials = async function() {
     const newId = document.getElementById('newAuthId').value.trim();
     const newPin = document.getElementById('newAuthPin').value;
+    
     if (!newId || !/^\d{4}$/.test(newPin)) return alert("有効な新しいIDと4桁の数字PINを入力してください。");
     const oldId = window.currentUser;
 
@@ -1647,12 +2202,19 @@
           await deleteDoc(getDocRef('users', oldId));
           oldData.pin = newPin;
           await setDoc(getDocRef('users', newId), oldData);
-        } else await setDoc(getDocRef('users', newId), { pin: newPin }, { merge: true });
-      } catch(e) { return alert("アカウント情報の更新に失敗しました。"); }
+        } else {
+          await setDoc(getDocRef('users', newId), { pin: newPin }, { merge: true });
+        }
+      } catch(e) {
+        console.error("更新エラー:", e);
+        return alert("アカウント情報の更新に失敗しました。");
+      }
     } else {
       if (newId !== oldId && allUsers[newId]) return alert("そのIDは既に他のユーザーに使用されています。");
-      let oldData = allUsers[oldId] || {}; delete allUsers[oldId];
-      oldData.pin = newPin; allUsers[newId] = oldData;
+      let oldData = allUsers[oldId] || {};
+      delete allUsers[oldId];
+      oldData.pin = newPin;
+      allUsers[newId] = oldData;
       localStorage.setItem('users_data', JSON.stringify(allUsers));
     }
 
@@ -1661,26 +2223,50 @@
       for (const e of allUserExps) { e.appUserId = newId; await fsSaveExpense(e); }
       const allUserIncs = allIncomes.filter(i => i.appUserId === oldId);
       for (const i of allUserIncs) { i.appUserId = newId; await fsSaveIncome(i); }
-      const bks = localStorage.getItem(`books_${oldId}`); if(bks) localStorage.setItem(`books_${newId}`, bks);
-      const curBk = localStorage.getItem(`currentBookId_${oldId}`); if(curBk) localStorage.setItem(`currentBookId_${newId}`, curBk);
+      
+      const bks = localStorage.getItem(`books_${oldId}`);
+      if(bks) localStorage.setItem(`books_${newId}`, bks);
+      
+      const curBk = localStorage.getItem(`currentBookId_${oldId}`);
+      if(curBk) localStorage.setItem(`currentBookId_${newId}`, curBk);
     }
 
-    window.currentUser = newId; localStorage.setItem('current_user', newId);
-    if (localStorage.getItem('saved_auth_id') === oldId) { localStorage.setItem('saved_auth_id', newId); localStorage.setItem('saved_auth_pin', newPin); }
+    window.currentUser = newId;
+    localStorage.setItem('current_user', newId);
+    
+    if (localStorage.getItem('saved_auth_id') === oldId) {
+      localStorage.setItem('saved_auth_id', newId);
+      localStorage.setItem('saved_auth_pin', newPin);
+    }
 
     alert("アカウント情報を更新しました。");
-    document.getElementById('newAuthId').value = ''; document.getElementById('newAuthPin').value = '';
+    document.getElementById('newAuthId').value = '';
+    document.getElementById('newAuthPin').value = '';
     document.getElementById('displayUserId').innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; margin-right:4px;">person</span> ${window.currentUser}`;
-    window.checkAdmin(); window.loadBooks();
+    
+    window.checkAdmin();
+    window.loadBooks();
   };
 
   window.loadUserData = function() {
-    if (isCloudEnabled) refreshCurrentUserLocalData();
-    else {
-      const savedExps = localStorage.getItem(`expenses_data_${window.currentUser}`);
-      if (savedExps) { try { window.expenses = JSON.parse(savedExps).filter(e => (e.bookId || 'default') === window.currentBookId); } catch(e){} }
-      const savedIncs = localStorage.getItem(`incomes_data_${window.currentUser}`);
-      if (savedIncs) { try { window.incomes = JSON.parse(savedIncs).filter(i => (i.bookId || 'default') === window.currentBookId); } catch(e){} }
+    if (isCloudEnabled) {
+      refreshCurrentUserLocalData();
+    } else {
+      const savedExpenses = localStorage.getItem(`expenses_data_${window.currentUser}`);
+      if (savedExpenses) { 
+        try { 
+          const allUserExps = JSON.parse(savedExpenses); 
+          window.expenses = allUserExps.filter(e => (e.bookId || 'default') === window.currentBookId);
+        } catch(e) {} 
+      } else window.expenses = [];
+
+      const savedIncomes = localStorage.getItem(`incomes_data_${window.currentUser}`);
+      if (savedIncomes) { 
+        try { 
+          const allUserIncs = JSON.parse(savedIncomes); 
+          window.incomes = allUserIncs.filter(i => (i.bookId || 'default') === window.currentBookId);
+        } catch(e) {} 
+      } else window.incomes = [];
       window.updateUI();
     }
   };
@@ -1691,9 +2277,12 @@
         const userSnap = await getDoc(getDocRef('users', window.currentUser));
         if (userSnap.exists() && userSnap.data().apiKey) {
           const decodedKey = decodeURIComponent(atob(userSnap.data().apiKey));
-          localStorage.setItem('gemini_api_key', decodedKey); document.getElementById('apiKey').value = decodedKey;
+          localStorage.setItem('gemini_api_key', decodedKey);
+          document.getElementById('apiKey').value = decodedKey;
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error("APIキー復元エラー:", e);
+      }
     }
   };
 
@@ -1703,33 +2292,67 @@
     localStorage.setItem('gemini_api_key', key);
     
     if (isCloudEnabled && firebaseUser && window.currentUser) {
-      try { await setDoc(getDocRef('users', window.currentUser), { apiKey: btoa(encodeURIComponent(key)) }, { merge: true }); } catch(e) {}
+      try {
+        const encodedKey = btoa(encodeURIComponent(key));
+        await setDoc(getDocRef('users', window.currentUser), { apiKey: encodedKey }, { merge: true });
+      } catch(e) {
+        console.error("APIキーのクラウド保存エラー:", e);
+      }
     }
+    
     alert("Gemini APIキーを保存しました。");
   };
 
   window.exportData = function() {
+    // ユーザーに紐づく全てのブックのデータをエクスポート
     const userExps = allExpenses.filter(e => e.appUserId === window.currentUser);
     const userIncs = allIncomes.filter(i => i.appUserId === window.currentUser);
-    const backup = { books: window.books, expenses: userExps.length > 0 ? userExps : window.expenses, incomes: userIncs.length > 0 ? userIncs : window.incomes };
+    
+    const backup = { 
+      books: window.books,
+      expenses: userExps.length > 0 ? userExps : window.expenses, 
+      incomes: userIncs.length > 0 ? userIncs : window.incomes
+    };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a'); link.href = url; link.download = `kakeibot_backup_${window.currentUser}.json`; link.click(); URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `kakeibot_backup_${window.currentUser}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   window.importData = async function(e) {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
         const backup = JSON.parse(event.target.result);
         if (backup.expenses || backup.incomes) {
+          
           if(backup.books && Array.isArray(backup.books)) {
-            backup.books.forEach(bk => { if(!window.books.find(b => b.id === bk.id)) window.books.push(bk); });
+            // ブック情報をマージ
+            backup.books.forEach(bk => {
+               if(!window.books.find(b => b.id === bk.id)) window.books.push(bk);
+            });
             window.saveBooks();
           }
-          if (backup.expenses) { for (const item of backup.expenses) { item.appUserId = window.currentUser; if(!item.bookId) item.bookId = 'default'; await fsSaveExpense(item); } }
-          if (backup.incomes) { for (const item of backup.incomes) { item.appUserId = window.currentUser; if(!item.bookId) item.bookId = 'default'; await fsSaveIncome(item); } }
+
+          if (backup.expenses) {
+            for (const item of backup.expenses) { 
+              item.appUserId = window.currentUser; 
+              if(!item.bookId) item.bookId = 'default';
+              await fsSaveExpense(item); 
+            }
+          }
+          if (backup.incomes) {
+            for (const item of backup.incomes) { 
+              item.appUserId = window.currentUser; 
+              if(!item.bookId) item.bookId = 'default';
+              await fsSaveIncome(item); 
+            }
+          }
           alert("データの取り込み（同期）が完了しました。");
         } else alert("不正なファイルフォーマットです。");
       } catch(err) { alert("JSONファイルのパースに失敗しました。"); }
@@ -1738,14 +2361,18 @@
     reader.readAsText(file);
   };
 
+  // --- 分析モードの切り替え ---
   window.setAnalysisMode = function(mode) {
     window.currentAnalysisMode = mode;
     if (mode === 'expense') {
-      document.getElementById('btnAnalysisExpense').classList.remove('outline'); document.getElementById('btnAnalysisIncome').classList.add('outline');
+      document.getElementById('btnAnalysisExpense').classList.remove('outline');
+      document.getElementById('btnAnalysisIncome').classList.add('outline');
     } else {
-      document.getElementById('btnAnalysisExpense').classList.add('outline'); document.getElementById('btnAnalysisIncome').classList.remove('outline');
+      document.getElementById('btnAnalysisExpense').classList.add('outline');
+      document.getElementById('btnAnalysisIncome').classList.remove('outline');
     }
-    window.updateMonthSelector(); window.renderCharts();
+    window.updateMonthSelector();
+    window.renderCharts();
   };
 
   window.switchTab = function(tabId, element) {
@@ -1756,43 +2383,62 @@
     
     if (tabId === 'history') window.updateHistoryTree();
     if (tabId === 'income') window.updateIncomeHistoryTree();
+    if (tabId === 'schedule') window.renderSchedules();
     if (tabId === 'analysis') { window.updateMonthSelector(); window.renderCharts(); }
     if (tabId === 'admin') window.loadAdminUsers();
   };
 
+  // --- 管理者関連 ---
   window.checkAdmin = function() {
     const adminTabBtn = document.getElementById('tabAdminBtn');
-    if (window.currentUser === ADMIN_ID) { adminTabBtn.classList.remove('hidden'); }
-    else {
+    if (window.currentUser === ADMIN_ID) {
+      adminTabBtn.classList.remove('hidden');
+    } else {
       adminTabBtn.classList.add('hidden');
-      if (document.getElementById('admin').classList.contains('active')) window.switchTab('record', document.querySelector('.tab'));
+      if (document.getElementById('admin').classList.contains('active')) {
+        window.switchTab('record', document.querySelector('.tab'));
+      }
     }
   };
 
   function maskText(text) {
-    if (!text) return "***"; if (text.length === 1) return "*";
-    if (text.length === 2) return text[0] + "*"; if (text.length === 3) return text[0] + "*" + text[2];
+    if (!text) return "***";
+    if (text.length === 1) return "*";
+    if (text.length === 2) return text[0] + "*";
+    if (text.length === 3) return text[0] + "*" + text[2];
     return text[0] + "***" + text[text.length - 1];
   }
 
   window.loadAdminUsers = function() {
     const select = document.getElementById('adminUserSelect');
     select.innerHTML = '<option value="">ユーザーを選択...</option>';
-    Object.keys(allUsers).forEach(uid => { if (uid !== ADMIN_ID) select.innerHTML += `<option value="${uid}">ユーザー: ${uid}</option>`; });
-    document.getElementById('adminEmptyMsg').classList.remove('hidden'); document.getElementById('adminDataArea').classList.add('hidden');
+    Object.keys(allUsers).forEach(uid => {
+      if (uid !== ADMIN_ID) {
+        select.innerHTML += `<option value="${uid}">ユーザー: ${uid}</option>`;
+      }
+    });
+    document.getElementById('adminEmptyMsg').classList.remove('hidden');
+    document.getElementById('adminDataArea').classList.add('hidden');
   };
 
   window.onAdminUserSelected = function() {
     const uid = document.getElementById('adminUserSelect').value;
-    if (!uid) { document.getElementById('adminEmptyMsg').classList.remove('hidden'); document.getElementById('adminDataArea').classList.add('hidden'); return; }
-    document.getElementById('adminEmptyMsg').classList.add('hidden'); document.getElementById('adminDataArea').classList.remove('hidden');
+    if (!uid) {
+      document.getElementById('adminEmptyMsg').classList.remove('hidden');
+      document.getElementById('adminDataArea').classList.add('hidden');
+      return;
+    }
+    document.getElementById('adminEmptyMsg').classList.add('hidden');
+    document.getElementById('adminDataArea').classList.remove('hidden');
     
     const expData = allExpenses.filter(e => e.appUserId === uid);
     const months = [...new Set(expData.map(e => e.date.substring(0, 7)))].sort().reverse();
     const selector = document.getElementById('adminMonthSelector');
-    selector.innerHTML = months.length > 0 ? months.map(m => `<option value="${m}">${m}</option>`).join('') : `<option value="">データなし</option>`;
+    selector.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (months.length === 0) selector.innerHTML = `<option value="">データなし</option>`;
     
-    window.renderAdminCharts(); window.renderAdminHistory(uid);
+    window.renderAdminCharts();
+    window.renderAdminHistory(uid);
   };
 
   window.renderAdminCharts = function() {
@@ -1804,18 +2450,27 @@
     if (window.adminTrendChartInstance) window.adminTrendChartInstance.destroy();
     if (window.adminEvalTrendChartInstance) window.adminEvalTrendChartInstance.destroy();
     
-    if (!uid || !selectedMonth) { document.getElementById('adminChartLegend').innerHTML = ''; document.getElementById('adminEvaluationStats').innerHTML = ''; return; }
+    if (!uid || !selectedMonth) {
+      document.getElementById('adminChartLegend').innerHTML = '';
+      document.getElementById('adminEvaluationStats').innerHTML = '';
+      return;
+    }
 
     const expData = allExpenses.filter(e => e.appUserId === uid);
     const monthData = expData.filter(e => e.date.startsWith(selectedMonth));
     
-    const totals = {}; let monthTotal = 0; let yesTotal = 0; let noTotal = 0;
+    const totals = {};
+    let monthTotal = 0;
+    let yesTotal = 0;
+    let noTotal = 0;
     
     monthData.forEach(e => {
-      if (e.isPoint) return;
+      if (e.isPoint) return; // 管理者グラフでもポイント利用分は除外
       const cost = e.price + e.tax;
-      if (totals[e.category] !== undefined) totals[e.category] += cost; else totals[e.category] = cost;
+      if (totals[e.category] !== undefined) totals[e.category] += cost;
+      else totals[e.category] = cost;
       monthTotal += cost;
+      
       if (e.isNecessary === true && e.name !== "外税(消費税)") yesTotal += cost;
       else if (e.isNecessary === false) noTotal += cost;
     });
@@ -1825,22 +2480,34 @@
     const noPct = reviewedTotal === 0 ? 0 : Math.round((noTotal / reviewedTotal) * 100);
     
     document.getElementById('adminEvaluationStats').innerHTML = `
-      <div style="flex:1; text-align:center;"><div style="font-size:14px; color:#666; margin-bottom: 4px;">👍 必要 (${yesPct}%)</div><div style="font-weight:bold; color:var(--green-text); font-size: 18px;">¥${yesTotal.toLocaleString()}</div></div>
-      <div style="flex:1; text-align:center; border-left:1px solid var(--border-color);"><div style="font-size:14px; color:#666; margin-bottom: 4px;">👎 無駄 (${noPct}%)</div><div style="font-weight:bold; color:var(--red-text); font-size: 18px;">¥${noTotal.toLocaleString()}</div></div>`;
+      <div style="flex:1; text-align:center;">
+        <div style="font-size:14px; color:#666; margin-bottom: 4px;">👍 必要 (${yesPct}%)</div>
+        <div style="font-weight:bold; color:var(--green-text); font-size: 18px;">¥${yesTotal.toLocaleString()}</div>
+      </div>
+      <div style="flex:1; text-align:center; border-left:1px solid var(--border-color);">
+        <div style="font-size:14px; color:#666; margin-bottom: 4px;">👎 無駄 (${noPct}%)</div>
+        <div style="font-weight:bold; color:var(--red-text); font-size: 18px;">¥${noTotal.toLocaleString()}</div>
+      </div>
+    `;
     
     Object.keys(totals).forEach(k => { if(totals[k] === 0) delete totals[k]; });
     const dynamicPieColors = Object.keys(totals).map((_, i) => chartColors[i % chartColors.length]);
     
-    window.adminDoughnutChartInstance = new Chart(document.getElementById('adminExpenseChart').getContext('2d'), {
-      type: 'doughnut', data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: dynamicPieColors, borderWidth: 0 }] },
+    const dCtx = document.getElementById('adminExpenseChart').getContext('2d');
+    window.adminDoughnutChartInstance = new Chart(dCtx, {
+      type: 'doughnut',
+      data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: dynamicPieColors, borderWidth: 0 }] },
       options: { responsive: true, plugins: { legend: { display: false } }, cutout: '70%' }
     });
 
-    let legendHtml = ''; let colorIndex = 0;
+    let legendHtml = '';
+    let colorIndex = 0;
     for (const cat in totals) {
-      const val = totals[cat]; const pct = monthTotal === 0 ? 0 : Math.round((val / monthTotal) * 100);
+      const val = totals[cat];
+      const pct = monthTotal === 0 ? 0 : Math.round((val / monthTotal) * 100);
       const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${dynamicPieColors[colorIndex]};margin-right:8px;"></span>`;
-      legendHtml += `<li><div style="display:flex; align-items:center;">${dot}${cat}</div> <div><span>¥${val.toLocaleString()}</span> <span style="color:#666; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`; colorIndex++;
+      legendHtml += `<li><div style="display:flex; align-items:center;">${dot}${cat}</div> <div><span>¥${val.toLocaleString()}</span> <span style="color:#666; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+      colorIndex++;
     }
     legendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:var(--primary); font-weight:bold;">¥${monthTotal.toLocaleString()}</span></li>`;
     document.getElementById('adminChartLegend').innerHTML = legendHtml;
@@ -1849,46 +2516,88 @@
     monthData.forEach(e => {
       if (e.isPoint) return;
       const day = parseInt(e.date.split('-')[2], 10);
-      blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += (e.price + e.tax);
+      const amount = e.price + e.tax;
+      if (day <= 10) blockTotals[0] += amount;
+      else if (day <= 20) blockTotals[1] += amount;
+      else blockTotals[2] += amount;
     });
     
-    window.adminTenDaysChartInstance = new Chart(document.getElementById('adminTenDaysChart').getContext('2d'), {
-      type: 'bar', data: { labels: ['上旬', '中旬', '下旬'], datasets: [{ data: blockTotals, backgroundColor: barColors, borderRadius: 6 }] },
+    const tdCtx = document.getElementById('adminTenDaysChart').getContext('2d');
+    window.adminTenDaysChartInstance = new Chart(tdCtx, {
+      type: 'bar',
+      data: { labels: ['上旬', '中旬', '下旬'], datasets: [{ data: blockTotals, backgroundColor: barColors, borderRadius: 6 }] },
       options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 
-    let targetMonths = [...new Set(expData.map(e => e.date.substring(0, 7)))].sort().slice(-12);
-    if(targetMonths.length === 0) targetMonths = [new Date().toISOString().substring(0, 7)];
+    let allMonths = [...new Set(expData.map(e => e.date.substring(0, 7)))].sort();
+    let targetMonths = allMonths.slice(-12);
+    if(targetMonths.length === 0) {
+      targetMonths = [new Date().toISOString().substring(0, 7)];
+    }
     
-    document.getElementById('adminTrendChartContainer').style.minWidth = Math.max(100, targetMonths.length * 15) + '%';
-    document.getElementById('adminEvalTrendChartContainer').style.minWidth = Math.max(100, targetMonths.length * 15) + '%';
+    const minWidth = Math.max(100, targetMonths.length * 15) + '%';
+    document.getElementById('adminTrendChartContainer').style.minWidth = minWidth;
+    document.getElementById('adminEvalTrendChartContainer').style.minWidth = minWidth;
 
     const expenseCategories = [...new Set(expData.map(e => e.category))].filter(c => c !== "ポイント利用");
-    const datasets = expenseCategories.map((cat, i) => ({
-      label: cat, backgroundColor: chartColors[i % chartColors.length],
-      data: targetMonths.map(m => expData.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0))
-    }));
-
-    window.adminTrendChartInstance = new Chart(document.getElementById('adminTrendChart').getContext('2d'), {
-      type: 'bar', data: { labels: targetMonths, datasets: datasets },
-      options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } } }
+    const datasets = expenseCategories.map((cat, i) => {
+      return {
+        label: cat,
+        data: targetMonths.map(m => {
+          return expData.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0);
+        }),
+        backgroundColor: chartColors[i % chartColors.length]
+      };
     });
 
-    const yesData = [], noData = [];
+    const tCtx = document.getElementById('adminTrendChart').getContext('2d');
+    window.adminTrendChartInstance = new Chart(tCtx, {
+      type: 'bar',
+      data: { labels: targetMonths, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }
+      }
+    });
+
+    const yesData = [];
+    const noData = [];
     targetMonths.forEach(m => {
       let y = 0, n = 0;
       expData.filter(e => e.date.startsWith(m) && !e.isPoint).forEach(e => {
         const cost = e.price + e.tax;
-        if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost; else if (e.isNecessary === false) n += cost;
+        if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
+        else if (e.isNecessary === false) n += cost;
       });
       const total = y + n;
-      if(total > 0) { yesData.push(Math.round((y / total) * 100)); noData.push(Math.round((n / total) * 100)); } else { yesData.push(0); noData.push(0); }
+      if(total > 0) {
+        yesData.push(Math.round((y / total) * 100));
+        noData.push(Math.round((n / total) * 100));
+      } else {
+        yesData.push(0);
+        noData.push(0);
+      }
     });
 
-    window.adminEvalTrendChartInstance = new Chart(document.getElementById('adminEvalTrendChart').getContext('2d'), {
+    const etCtx = document.getElementById('adminEvalTrendChart').getContext('2d');
+    window.adminEvalTrendChartInstance = new Chart(etCtx, {
       type: 'bar',
-      data: { labels: targetMonths, datasets: [ { label: '必要(%)', data: yesData, backgroundColor: chartColors[0] }, { label: '無駄(%)', data: noData, backgroundColor: chartColors[4] } ] },
-      options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
+      data: {
+        labels: targetMonths,
+        datasets: [
+          { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 },
+          { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: function(value) { return value + "%" } } } },
+        plugins: {
+          tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + '%'; } } },
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } }
+        }
+      }
     });
   };
 
@@ -1898,136 +2607,269 @@
     const area = document.getElementById('adminHistoryArea');
 
     let html = '<div class="card"><h3 style="margin-bottom:12px;">支出履歴</h3>';
-    if (expData.length === 0) { html += '<p style="color:#666; font-size:12px;">支出データがありません</p>'; }
-    else {
-      expData.sort((a, b) => { if (a.date !== b.date) return b.date.localeCompare(a.date); return b.id.localeCompare(a.id); }).forEach(e => {
+    if (expData.length === 0) {
+      html += '<p style="color:#666; font-size:12px;">支出データがありません</p>';
+    } else {
+      expData.sort((a, b) => b.date.localeCompare(a.date));
+      expData.forEach(e => {
         const total = e.price + e.tax;
         let amountHtml = `¥${total.toLocaleString()}`;
         if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">-${e.pointAmount.toLocaleString()} pt</span>`;
-        html += `<div class="history-item" style="cursor:default; margin-left:0;"><div><div style="font-weight:bold; font-size:14px; color:var(--text-color);">${maskText(e.name)}</div><div style="font-size:12px; color:#666; margin-top:2px;">${e.date} • ${maskText(e.store)}</div><div style="font-size:12px; color:#666;">カテゴリ: ${e.category}</div></div><div style="font-weight:bold;">${amountHtml}</div></div>`;
+        html += `
+          <div class="history-item" style="cursor:default; margin-left:0;">
+            <div>
+              <div style="font-weight:bold; font-size:14px; color:var(--text-color);">${maskText(e.name)}</div>
+              <div style="font-size:12px; color:#666; margin-top:2px;">${e.date} • ${maskText(e.store)}</div>
+              <div style="font-size:12px; color:#666;">カテゴリ: ${e.category}</div>
+            </div>
+            <div style="font-weight:bold;">${amountHtml}</div>
+          </div>`;
       });
     }
-    html += '</div><div class="card"><h3 style="margin-bottom:12px;">収入履歴</h3>';
-    if (incData.length === 0) { html += '<p style="color:#666; font-size:12px;">収入データがありません</p>'; }
-    else {
-      incData.sort((a, b) => { if (a.date !== b.date) return b.date.localeCompare(a.date); return b.id.localeCompare(a.id); }).forEach(i => {
-        html += `<div class="history-item" style="cursor:default; margin-left:0;"><div><div style="font-weight:bold; font-size:14px; color:var(--green-text);">+ ¥${i.amount.toLocaleString()}</div><div style="font-size:12px; color:#666; margin-top:2px;">${i.date} • ${maskText(i.source)}</div></div></div>`;
+    html += '</div>';
+
+    html += '<div class="card"><h3 style="margin-bottom:12px;">収入履歴</h3>';
+    if (incData.length === 0) {
+      html += '<p style="color:#666; font-size:12px;">収入データがありません</p>';
+    } else {
+      incData.sort((a, b) => b.date.localeCompare(a.date));
+      incData.forEach(i => {
+        html += `
+          <div class="history-item" style="cursor:default; margin-left:0;">
+            <div>
+              <div style="font-weight:bold; font-size:14px; color:var(--green-text);">+ ¥${i.amount.toLocaleString()}</div>
+              <div style="font-size:12px; color:#666; margin-top:2px;">${i.date} • ${maskText(i.source)}</div>
+            </div>
+          </div>`;
       });
     }
-    area.innerHTML = html + '</div>';
+    html += '</div>';
+
+    area.innerHTML = html;
   };
 
   window.executeDeleteAdminUser = async function() {
     const uid = document.getElementById('adminUserSelect').value;
     if (!uid) return;
-    window.customConfirm(`ユーザー(${uid})とそのすべてのデータを削除しますか？\nこの操作は取り消せません。`, async () => {
-      try {
-        if (isCloudEnabled && firebaseUser) {
-          await deleteDoc(getDocRef('users', uid));
-          const exps = allExpenses.filter(e => e.appUserId === uid); for (const e of exps) await deleteDoc(getDocRef('expenses', e.id));
-          const incs = allIncomes.filter(i => i.appUserId === uid); for (const i of incs) await deleteDoc(getDocRef('incomes', i.id));
-        } else {
-          delete allUsers[uid]; localStorage.setItem('users_data', JSON.stringify(allUsers));
-          allExpenses = allExpenses.filter(e => e.appUserId !== uid); allIncomes = allIncomes.filter(i => i.appUserId !== uid);
-          localStorage.removeItem(`expenses_data_${uid}`); localStorage.removeItem(`incomes_data_${uid}`);
-          localStorage.removeItem(`books_${uid}`); localStorage.removeItem(`currentBookId_${uid}`);
-        }
-        alert("ユーザーを削除しました。");
-        document.getElementById('adminUserSelect').value = ""; window.onAdminUserSelected(); window.loadAdminUsers();
-      } catch (err) { alert("削除に失敗しました。"); }
-    });
+    
+    if (!confirm(`ユーザー(${uid})とそのすべてのデータを削除しますか？\nこの操作は取り消せません。`)) return;
+
+    try {
+      if (isCloudEnabled && firebaseUser) {
+        await deleteDoc(getDocRef('users', uid));
+        const exps = allExpenses.filter(e => e.appUserId === uid);
+        for (const e of exps) await deleteDoc(getDocRef('expenses', e.id));
+        const incs = allIncomes.filter(i => i.appUserId === uid);
+        for (const i of incs) await deleteDoc(getDocRef('incomes', i.id));
+      } else {
+        delete allUsers[uid];
+        localStorage.setItem('users_data', JSON.stringify(allUsers));
+        allExpenses = allExpenses.filter(e => e.appUserId !== uid);
+        allIncomes = allIncomes.filter(i => i.appUserId !== uid);
+        localStorage.removeItem(`expenses_data_${uid}`);
+        localStorage.removeItem(`incomes_data_${uid}`);
+        localStorage.removeItem(`books_${uid}`);
+        localStorage.removeItem(`currentBookId_${uid}`);
+        localStorage.removeItem(`custom_categories_${uid}_default`);
+        localStorage.removeItem(`ai_auto_category_${uid}_default`);
+      }
+      alert("ユーザーを削除しました。");
+      document.getElementById('adminUserSelect').value = "";
+      window.onAdminUserSelected();
+      window.loadAdminUsers();
+    } catch (err) {
+      console.error(err);
+      alert("削除に失敗しました。");
+    }
   };
 
+  // --- WebRTCカメラ (ハイブリッド方式) ---
   let currentStream = null;
 
   window.openCameraModal = async function() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { document.getElementById('fallbackCameraInput').click(); return; }
-    const video = document.getElementById('cameraVideo'); const modal = document.getElementById('cameraModal');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      document.getElementById('fallbackCameraInput').click();
+      return;
+    }
+
+    const video = document.getElementById('cameraVideo');
+    const modal = document.getElementById('cameraModal');
+    
     try {
-      try { currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); }
-      catch(err1) { try { currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); }
-      catch(err2) { currentStream = await navigator.mediaDevices.getUserMedia({ video: true }); } }
-      video.srcObject = currentStream; modal.classList.remove('hidden'); video.play().catch(e => {});
-    } catch (error) { document.getElementById('fallbackCameraInput').click(); }
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
+      } catch(err1) {
+        try {
+          currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        } catch(err2) {
+          currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+      }
+      
+      video.srcObject = currentStream;
+      modal.classList.remove('hidden');
+      video.play().catch(e => console.warn("Video play error:", e));
+    } catch (error) {
+      console.warn("カメラの起動に失敗しました:", error);
+      document.getElementById('fallbackCameraInput').click();
+    }
   };
 
   window.closeCameraModal = function() {
-    document.getElementById('cameraModal').classList.add('hidden');
-    if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
+    const modal = document.getElementById('cameraModal');
+    modal.classList.add('hidden');
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+      currentStream = null;
+    }
   };
 
   window.takePhoto = async function() {
-    const video = document.getElementById('cameraVideo'); const canvas = document.getElementById('cameraCanvas');
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
     window.closeCameraModal();
-    let arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-    await window.handleImageUpload({ target: { files: [new File([u8arr], `receipt_${Date.now()}.jpg`, {type:mime})], value: '' } });
+    
+    const file = dataURLtoFile(dataUrl, `receipt_${Date.now()}.jpg`);
+    await window.handleImageUpload({ target: { files: [file], value: '' } });
   };
 
+  function dataURLtoFile(dataurl, filename) {
+    let arr = dataurl.split(','),
+        mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), 
+        n = bstr.length, 
+        u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, {type:mime});
+  }
+
+  // --- AI 画像解析 (OCR) ---
   async function compressImage(file) {
     return new Promise((resolve) => {
-      const reader = new FileReader(); reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
       reader.onload = event => {
-        const img = new Image(); img.src = event.target.result;
+        const img = new Image();
+        img.src = event.target.result;
         img.onload = () => {
-          const canvas = document.createElement('canvas'); const max_size = 800; let width = img.width, height = img.height;
-          if (width > height && width > max_size) { height *= max_size / width; width = max_size; }
-          else if (height > max_size) { width *= max_size / height; height = max_size; }
-          canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+          const canvas = document.createElement('canvas');
+          const max_size = 600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > max_size) {
+            height *= max_size / width;
+            width = max_size;
+          } else if (height > max_size) {
+            width *= max_size / height;
+            height = max_size;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7)); 
         };
       };
     });
   }
 
-  // AI解析: 高速化と精度向上を両立させたプロンプト
   window.handleImageUpload = async function(e) {
-    const file = e.target?.files[0] || e.target; if (!file || !file.name) return;
+    const file = e.target?.files[0] || e.target;
+    if (!file || !file.name) return;
+
     const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) { if(e.target.value) e.target.value = ''; return alert("APIキーを設定してください。"); }
     
     const loadingMsg = document.getElementById('loadingMsg');
-    loadingMsg.innerText = 'AIが解析中...'; loadingMsg.classList.remove('hidden');
+    loadingMsg.innerText = 'AIが解析中...';
+    loadingMsg.classList.remove('hidden');
 
     try {
       const compressedDataUrl = await compressImage(file);
       const base64String = compressedDataUrl.split(',')[1];
-      const catInstructions = window.aiAutoCategory ? `[${window.userCategories.join(', ')}]のいずれかに分類` : `全て「${window.userCategories[0] || '未分類'}」に分類`;
+
+      let catInstructions = window.aiAutoCategory
+        ? `[${window.userCategories.join(', ')}]のいずれかに分類。
+分類基準:
+- 食費(純): 料理用材料、生食可能な果物
+- 食費(外食): 飲食店での食事、カフェ等
+- 食費(弁当): 中食、弁当、惣菜、完成済み料理、飲料
+- 雑費: 交際費、レジャー、銭湯など該当なしのもの
+- 経費: (日用品/交通費/公共料金/その他) から選択
+- 税: 単独の税`
+        : `全て「${window.userCategories[0] || '未分類'}」に分類`;
 
       const payload = {
         contents: [{
           parts: [
-            { text: `画像(レシート等)から購入情報を抽出し、純粋なJSON配列のみを出力。
-【厳守ルール】
-1. 数値抽出の徹底: 単価(unit_price)、数量(qty)、合計額(price)を正確に抽出。
-2. 内税/外税の厳格な区別:
-   - 内税(税込): 税を新たにカウント・分離せず、商品価格(price)に含める。tax項目は0とする。
-   - 外税(税別): name:"外税(消費税)", category:"税", price:金額 として1つの独立アイテムを作成。
-3. 不明・非対象画像: {"error":"認識不可"} を出力。
-4. 名称補完: 途切れた商品名は妥当な名称に補完。店名の支店名は除外(例:セブンイレブン)。
-5. カテゴリ分類: ${catInstructions}
-出力JSON形式（マークダウン不要、これ以外出力しない）:
-{"items":[{"date":"YYYY-MM-DD","store":"店名","name":"品名","unit_price":100,"qty":1,"price":100,"tax":0,"category":"カテゴリ","memo":""}]}`
+            { text: `画像(レシート等)を解析しJSONを出力。
+ルール:
+1. 不明・非対象は {"error":"認識不可"} を返す。
+2. unit_price(単価), qty(数量), price(合計額)を分ける。
+3. 税込はpriceに含め、外税は name:"外税(消費税)", category:"税" として独立。
+4. 途切れた商品名はLLMの知識で妥当な名称に補完。
+5. 店名の支店名は除外(例: セブンイレブン)。
+6. カテゴリ: ${catInstructions}`
             },
-            { inline_data: { mime_type: "image/jpeg", data: base64String } }
+            {
+              inline_data: { mime_type: "image/jpeg", data: base64String }
+            }
           ]
         }],
-        generationConfig: { responseMimeType: "application/json" }
+        generationConfig: { 
+          responseMimeType: "application/json",
+          temperature: 0,
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              items: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    date: { type: "STRING" },
+                    store: { type: "STRING" },
+                    name: { type: "STRING" },
+                    unit_price: { type: "INTEGER" },
+                    qty: { type: "INTEGER" },
+                    price: { type: "INTEGER" },
+                    tax: { type: "INTEGER" },
+                    category: { type: "STRING" },
+                    memo: { type: "STRING" }
+                  }
+                }
+              },
+              error: { type: "STRING" }
+            }
+          }
+        }
       };
 
-      let modelName = 'gemini-3.8-flash';
+      const targetModel = 'gemini-3.7-flash';
       let response;
       try {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      } catch(fetchError) { throw new Error("ネットワークエラーが発生しました。"); }
+        response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(payload)
+        });
+      } catch(fetchError) {
+        throw new Error("ネットワークエラーが発生しました。");
+      }
       
       if (!response.ok) {
-        modelName = 'gemini-3.8-flash';
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!response.ok) throw new Error(`通信エラー (${response.status})。時間をおいて再試行してください。`);
+        throw new Error(`通信エラー (${response.status})。サーバーが混雑しています。再度お試しください。`);
       }
       
       const result = await response.json();
@@ -2035,31 +2877,51 @@
 
       let jsonText = result.candidates[0].content?.parts[0]?.text || "";
       jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const startIdx = jsonText.indexOf('{'); const endIdx = jsonText.lastIndexOf('}');
-      if (startIdx !== -1 && endIdx !== -1) jsonText = jsonText.substring(startIdx, endIdx + 1); else throw new Error("AIがJSON形式で応答しませんでした。");
       
-      const parsedData = JSON.parse(jsonText);
-      if (parsedData.error) throw new Error(parsedData.error);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(jsonText);
+      } catch (parseErr) {
+        throw new Error("AIの解析データに異常がありました。");
+      }
+      
+      if (parsedData.error) {
+        throw new Error(parsedData.error);
+      }
 
       if (parsedData.items && parsedData.items.length > 0) {
         window.tempParsedItems = [];
         for (const item of parsedData.items) {
           const isTax = item.name === "外税(消費税)";
           let itemCategory = item.category;
-          if (!window.userCategories.includes(itemCategory)) itemCategory = window.userCategories[0] || '未分類';
-          window.tempParsedItems.push({
+          
+          if (!window.userCategories.includes(itemCategory)) {
+            itemCategory = window.userCategories[0] || '未分類';
+          }
+
+          const expense = {
             id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-            appUserId: window.currentUser, bookId: window.currentBookId,
+            appUserId: window.currentUser,
+            bookId: window.currentBookId,
             date: item.date || new Date().toISOString().split('T')[0],
-            store: item.store || "不明", name: item.name || "不明な商品",
-            unit_price: parseInt(item.unit_price) || 0, qty: parseInt(item.qty) || 1, price: parseInt(item.price) || 0, tax: parseInt(item.tax) || 0,
-            category: itemCategory, memo: item.memo || "", isNecessary: isTax ? true : null
-          });
+            store: item.store || "不明",
+            name: item.name || "不明な商品",
+            unit_price: parseInt(item.unit_price) || 0,
+            qty: parseInt(item.qty) || 1,
+            price: parseInt(item.price) || 0,
+            tax: parseInt(item.tax) || 0,
+            category: itemCategory,
+            memo: item.memo || "",
+            isNecessary: isTax ? true : null
+          };
+          window.tempParsedItems.push(expense);
         }
         loadingMsg.classList.add('hidden');
         if(e.target.value !== undefined) e.target.value = '';
         window.showOcrConfirmModal();
-      } else throw new Error("商品を読み取れませんでした。");
+      } else {
+        throw new Error("レシート・書類から商品を読み取れませんでした。");
+      }
     } catch (error) { 
       loadingMsg.classList.add('hidden'); 
       if(e.target.value !== undefined) e.target.value = '';
@@ -2069,8 +2931,14 @@
 
   window.saveParsedItems = async function(items) {
     let addedCount = 0;
-    for (const item of items) { await fsSaveExpense(item); addedCount++; }
-    alert(`記録を保存し、${addedCount}件の記録を現在のブックに追加しました！`);
+    for (const item of items) {
+      await fsSaveExpense(item);
+      // 税金およびポイント利用は品数（件数）にカウントしない
+      if (item.name !== "外税(消費税)" && item.category !== "税" && !item.isPoint) {
+        addedCount++;
+      }
+    }
+    alert(`記録を保存し、${addedCount}点の商品を現在のブックに追加しました！（※税金は品数に含みません）`);
     window.tempParsedItems = [];
   };
 
@@ -2081,13 +2949,19 @@
     const firstItem = window.tempParsedItems[0];
     document.getElementById('ocrBatchDate').value = firstItem.date || new Date().toISOString().split('T')[0];
     document.getElementById('ocrBatchStore').value = firstItem.store || "";
-    window.updatePointTypeSelect(); document.getElementById('ocrPointAmount').value = '';
+    
+    // ポイント選択初期化
+    window.updatePointTypeSelect();
+    document.getElementById('ocrPointAmount').value = '';
 
     let html = '';
     window.tempParsedItems.forEach((item, index) => {
       const isTax = item.name === "外税(消費税)";
+      
       let itemCatOptions = window.userCategories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
-      if (!window.userCategories.includes(item.category)) itemCatOptions += `<option value="${item.category}" selected>${item.category} (旧)</option>`;
+      if (!window.userCategories.includes(item.category)) {
+          itemCatOptions += `<option value="${item.category}" selected>${item.category} (旧)</option>`;
+      }
 
       html += `
         <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #ccc;">
@@ -2096,10 +2970,14 @@
             ${item.qty > 1 ? `<span style="font-size:12px; color:#888;">@¥${item.unit_price} × ${item.qty}</span>` : ''}
           </div>
           <input type="text" id="ocrItemName_${index}" value="${item.name.replace(/"/g, '&quot;')}" style="margin-bottom: 4px; padding: 6px; font-size: 13px;" ${isTax ? 'readonly style="background:#f0ebeb; color:#888;"' : ''}>
-          <select id="ocrItemCat_${index}" style="margin-bottom: 0; padding: 6px; font-size: 13px;" ${isTax ? 'disabled' : ''}>${itemCatOptions}</select>
-        </div>`;
+          <select id="ocrItemCat_${index}" style="margin-bottom: 0; padding: 6px; font-size: 13px;" ${isTax ? 'disabled' : ''}>
+            ${itemCatOptions}
+          </select>
+        </div>
+      `;
     });
     listDiv.innerHTML = html;
+    
     document.getElementById('ocrConfirmModal').classList.remove('hidden');
   };
 
@@ -2108,23 +2986,42 @@
     const batchStore = document.getElementById('ocrBatchStore').value.trim();
 
     window.tempParsedItems.forEach((item, index) => {
-      if (batchDate) item.date = batchDate; if (batchStore) item.store = batchStore;
-      const nameInput = document.getElementById(`ocrItemName_${index}`); const catSelect = document.getElementById(`ocrItemCat_${index}`);
-      if (nameInput && !nameInput.readOnly) item.name = nameInput.value.trim() || item.name;
-      if (catSelect && !catSelect.disabled) item.category = catSelect.value;
+      if (batchDate) item.date = batchDate;
+      if (batchStore) item.store = batchStore;
+
+      const nameInput = document.getElementById(`ocrItemName_${index}`);
+      const catSelect = document.getElementById(`ocrItemCat_${index}`);
+      if (nameInput && !nameInput.readOnly) {
+          item.name = nameInput.value.trim() || item.name;
+      }
+      if (catSelect && !catSelect.disabled) {
+          item.category = catSelect.value;
+      }
     });
 
     const ptType = document.getElementById('ocrPointType').value;
     const ptAmount = parseInt(document.getElementById('ocrPointAmount').value) || 0;
     
     if (ptType && ptType !== 'NEW' && ptAmount > 0) {
-      window.tempParsedItems.push({
+      const ptExpense = {
         id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-        appUserId: window.currentUser, bookId: window.currentBookId,
-        date: batchDate || new Date().toISOString().split('T')[0], store: batchStore || "不明",
-        name: `${ptType}利用`, unit_price: 0, qty: 1, price: 0, tax: 0, category: "ポイント利用", memo: "レシート値引き",
-        isNecessary: null, isPoint: true, pointType: ptType, pointAmount: ptAmount
-      });
+        appUserId: window.currentUser,
+        bookId: window.currentBookId,
+        date: batchDate || new Date().toISOString().split('T')[0],
+        store: batchStore || "不明",
+        name: `${ptType}利用`,
+        unit_price: 0,
+        qty: 1,
+        price: 0,
+        tax: 0,
+        category: "ポイント利用",
+        memo: "レシート値引き",
+        isNecessary: null,
+        isPoint: true,
+        pointType: ptType,
+        pointAmount: ptAmount
+      };
+      window.tempParsedItems.push(ptExpense);
     }
 
     document.getElementById('ocrConfirmModal').classList.add('hidden');
@@ -2133,7 +3030,8 @@
 
   window.discardOcrConfirm = function() {
     document.getElementById('ocrConfirmModal').classList.add('hidden');
-    window.tempParsedItems = []; alert("認識結果を破棄しました。");
+    window.tempParsedItems = [];
+    alert("認識結果を破棄しました。");
   };
 
   window.saveExpense = async function() {
@@ -2142,109 +3040,70 @@
     const qty = parseInt(document.getElementById('inputQty').value) || 1;
     const isTax = name === "外税(消費税)";
     
-    await fsSaveExpense({
+    const expense = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-      appUserId: window.currentUser, bookId: window.currentBookId,
+      appUserId: window.currentUser,
+      bookId: window.currentBookId,
       date: document.getElementById('inputDate').value || new Date().toISOString().split('T')[0],
-      store: document.getElementById('inputStore').value.trim() || "不明", name: name,
-      unit_price: unitPrice, qty: qty, price: unitPrice * qty, tax: parseInt(document.getElementById('inputTax').value) || 0,
-      category: document.getElementById('inputCategory').value, memo: document.getElementById('inputMemo').value.trim() || "",
+      store: document.getElementById('inputStore').value.trim() || "不明",
+      name: name,
+      unit_price: unitPrice,
+      qty: qty,
+      price: unitPrice * qty,
+      tax: parseInt(document.getElementById('inputTax').value) || 0,
+      category: document.getElementById('inputCategory').value,
+      memo: document.getElementById('inputMemo').value.trim() || "",
       isNecessary: isTax ? true : null
-    });
+    };
     
-    document.getElementById('inputName').value = ''; document.getElementById('inputUnitPrice').value = ''; document.getElementById('inputQty').value = '1';
-    document.getElementById('inputTax').value = ''; document.getElementById('inputMemo').value = '';
+    await fsSaveExpense(expense);
+    
+    document.getElementById('inputName').value = '';
+    document.getElementById('inputUnitPrice').value = '';
+    document.getElementById('inputQty').value = '1';
+    document.getElementById('inputTax').value = '';
+    document.getElementById('inputMemo').value = '';
   };
 
-  // --- 収入記録用関数群の復元 ---
-  window.saveIncome = async function() {
-    const source = document.getElementById('incomeSource').value.trim() || "未入力";
-    const amount = parseInt(document.getElementById('incomeAmount').value) || 0;
-    if (amount <= 0) return alert("正しい金額を入力してください。");
-
-    await fsSaveIncome({
-      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-      appUserId: window.currentUser, bookId: window.currentBookId,
-      date: document.getElementById('incomeDate').value || new Date().toISOString().split('T')[0],
-      source: source, amount: amount, memo: document.getElementById('incomeMemo').value.trim() || ""
-    });
-
-    document.getElementById('incomeSource').value = ''; document.getElementById('incomeAmount').value = ''; document.getElementById('incomeMemo').value = '';
-    window.updateIncomeDatalist();
-  };
-
-  window.updateIncomeDatalist = function() {
-    const list = document.getElementById('incomeSourceOptions');
-    if(!list) return;
-    list.innerHTML = [...new Set(window.incomes.map(i => i.source))].map(s => `<option value="${s}"></option>`).join('');
-  };
-
-  window.updateIncomeHistoryTree = function() {
-    const listDiv = document.getElementById('incomeHistoryList');
-    if(!listDiv) return;
-    if (window.incomes.length === 0) { listDiv.innerHTML = '<p style="color:#888;">収入履歴がありません</p>'; return; }
-
-    const byDate = {};
-    window.incomes.forEach(i => { if (!byDate[i.date]) byDate[i.date] = []; byDate[i.date].push(i); });
-
-    let html = '';
-    for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
-      let dateTotal = byDate[date].reduce((sum, i) => sum + i.amount, 0);
-      html += `<details open><summary>${date} <span style="color:var(--green-text)">+¥${dateTotal.toLocaleString()}</span></summary><div>`;
-      byDate[date].sort((a, b) => b.id.localeCompare(a.id)).forEach(i => {
-        const memoText = i.memo ? `<div class="memo-badge"><span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">edit_document</span> ${i.memo}</div>` : '';
-        html += `<div class="history-item" onclick="openEditIncomeModal('${i.id}')"><div><div style="font-weight:bold; font-size:14px; color:var(--text-color);">${i.source}</div>${memoText}</div><div style="font-weight:bold; color:var(--green-text);">+¥${i.amount.toLocaleString()}</div></div>`;
-      });
-      html += `</div></details>`;
-    }
-    listDiv.innerHTML = html;
-  };
-
-  window.openEditIncomeModal = function(id) {
-    const i = window.incomes.find(x => x.id === id);
-    if(!i) return;
-    document.getElementById('editIncomeId').value = i.id; document.getElementById('editIncomeDate').value = i.date;
-    document.getElementById('editIncomeSource').value = i.source; document.getElementById('editIncomeAmount').value = i.amount;
-    document.getElementById('editIncomeMemo').value = i.memo || ""; document.getElementById('editIncomeModal').classList.remove('hidden');
-  };
-
-  window.closeEditIncomeModal = function() { document.getElementById('editIncomeModal').classList.add('hidden'); };
-
-  window.updateIncome = async function() {
-    const id = document.getElementById('editIncomeId').value;
-    const i = window.incomes.find(x => x.id === id);
-    if(i) {
-      i.date = document.getElementById('editIncomeDate').value; i.source = document.getElementById('editIncomeSource').value;
-      i.amount = parseInt(document.getElementById('editIncomeAmount').value) || 0; i.memo = document.getElementById('editIncomeMemo').value;
-      await fsSaveIncome(i); window.closeEditIncomeModal();
-    }
-  };
-
-  window.deleteIncome = async function() {
-    window.customConfirm("この収入記録を完全に削除しますか？", async () => {
-      const id = document.getElementById('editIncomeId').value;
-      await fsDeleteIncome(id); window.closeEditIncomeModal();
-    });
-  };
-
+  // ★ 変更点：ポイント類を整理(スワイプ)対象からさらに厳密に除外
   window.updateUI = function() {
     const unreviewed = window.expenses.filter(e => e.isNecessary === null && !e.isPoint && e.category !== "ポイント利用");
     document.getElementById('badgeUnreviewed').innerText = unreviewed.length > 0 ? `(${unreviewed.length})` : '';
 
     const swipeArea = document.getElementById('swipeArea');
     if (unreviewed.length > 0) {
-      const target = unreviewed[0]; const total = target.price + target.tax;
+      const target = unreviewed[0];
+      const total = target.price + target.tax;
       const qtyText = target.qty > 1 ? `<span style="font-size:16px; color:#888; font-weight:normal;">(@¥${target.unit_price} × ${target.qty})</span>` : '';
       const memoDisplay = target.memo ? `<div class="memo-badge"><span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">edit_document</span> ${target.memo}</div>` : '';
-      swipeArea.innerHTML = `<div style="font-size: 14px; color: #888;">${target.date} • ${target.store}</div><div style="font-size: 22px; font-weight: bold; margin: 12px 0;">${target.name} <br> ${qtyText}</div><div class="price-text">¥${total} <span style="font-size:12px; font-weight:normal; color:#888;">(税: ¥${target.tax})</span></div><div style="font-size: 14px; color: #888;">${target.category}</div>${memoDisplay}<div class="swipe-actions"><button class="btn-no" onclick="reviewExpense('${target.id}', false)"><span class="material-symbols-outlined" style="font-size: 28px; color: var(--red-text);">thumb_down</span></button><button class="btn-yes" onclick="reviewExpense('${target.id}', true)"><span class="material-symbols-outlined" style="font-size: 28px; color: var(--green-text);">thumb_up</span></button></div>`;
-    } else swipeArea.innerHTML = `<p style="color: #888; font-weight:bold; display:flex; justify-content:center; align-items:center; gap:4px;">未評価の出費はありません <span class="material-symbols-outlined" style="font-size: 16px;">auto_awesome</span></p>`;
+      
+      swipeArea.innerHTML = `
+        <div style="font-size: 14px; color: #888;">${target.date} • ${target.store}</div>
+        <div style="font-size: 22px; font-weight: bold; margin: 12px 0;">${target.name} <br> ${qtyText}</div>
+        <div class="price-text">¥${total} <span style="font-size:12px; font-weight:normal; color:#888;">(税: ¥${target.tax})</span></div>
+        <div style="font-size: 14px; color: #888;">${target.category}</div>
+        ${memoDisplay}
+        <div class="swipe-actions">
+          <button class="btn-no" onclick="reviewExpense('${target.id}', false)"><span class="material-symbols-outlined" style="font-size: 28px; color: var(--red-text);">thumb_down</span></button>
+          <button class="btn-yes" onclick="reviewExpense('${target.id}', true)"><span class="material-symbols-outlined" style="font-size: 28px; color: var(--green-text);">thumb_up</span></button>
+        </div>`;
+    } else {
+      swipeArea.innerHTML = `<p style="color: #888; font-weight:bold; display:flex; justify-content:center; align-items:center; gap:4px;">未評価の出費はありません <span class="material-symbols-outlined" style="font-size: 16px;">auto_awesome</span></p>`;
+    }
 
     window.updateSwipeHistory();
     if (document.getElementById('history').classList.contains('active')) window.updateHistoryTree();
     if (document.getElementById('income').classList.contains('active')) window.updateIncomeHistoryTree();
-    if (document.getElementById('analysis').classList.contains('active')) { window.updateMonthSelector(); window.renderCharts(); }
+    if (document.getElementById('analysis').classList.contains('active')) {
+      window.updateMonthSelector();
+      window.renderCharts();
+    }
     if (document.getElementById('admin').classList.contains('active')) window.loadAdminUsers();
-    if(typeof window.updateIncomeDatalist === 'function') window.updateIncomeDatalist();
+    
+    // updateIncomeDatalist は存在しない場合エラー回避のためチェック
+    if(typeof window.updateIncomeDatalist === 'function') {
+      window.updateIncomeDatalist();
+    }
   };
 
   window.reviewExpense = async function(id, isNecessary) {
@@ -2252,20 +3111,39 @@
     if (e) { e.isNecessary = isNecessary; await fsSaveExpense(e); }
   };
 
+  // ★ 変更点：ポイント類を整理履歴(スワイプ記録)からさらに厳密に除外
   window.updateSwipeHistory = function() {
     const historyList = document.getElementById('swipeHistoryList');
     const reviewed = window.expenses.filter(e => e.isNecessary !== null && e.name !== "外税(消費税)" && !e.isPoint && e.category !== "ポイント利用");
     if (reviewed.length === 0) { historyList.innerHTML = '<p style="color:#888;">スワイプ記録がありません</p>'; return; }
 
     const byDate = {};
-    reviewed.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+    reviewed.forEach(e => {
+      if (!byDate[e.date]) byDate[e.date] = [];
+      byDate[e.date].push(e);
+    });
 
     let html = '';
     for (const date of Object.keys(byDate).sort((a,b) => b.localeCompare(a))) {
       html += `<details open><summary>${date}</summary><div>`;
-      byDate[date].sort((a,b) => b.id.localeCompare(a.id)).forEach(e => {
-        const isYes = e.isNecessary === true; const icon = isYes ? 'thumb_up' : 'thumb_down'; const color = isYes ? 'var(--green-text)' : 'var(--red-text)'; const bg = isYes ? 'var(--pale-green)' : 'var(--pale-red)'; const border = isYes ? 'var(--pale-green-border)' : 'var(--pale-red-border)'; const qtyText = e.qty > 1 ? `<span style="font-size:11px; color:#888;">(@¥${e.unit_price}×${e.qty})</span>` : '';
-        html += `<div class="history-item" style="padding-left:0;"><div style="display:flex; align-items:center;"><span class="material-symbols-outlined" style="background:${bg}; border:1px solid ${border}; border-radius:4px; padding:4px; font-size:16px; color:${color}; width:24px; text-align:center;">${icon}</span><div style="margin-left:12px;"><div style="font-weight:bold; font-size:14px;">${e.name} ${qtyText}</div></div></div><div style="display:flex; align-items:center;"><span style="font-weight:bold; margin-right:16px;">¥${e.price + e.tax}</span><button class="outline" style="padding:4px 8px; font-size:12px;" onclick="undoSwipe('${e.id}')">戻す</button></div></div>`;
+      byDate[date].forEach(e => {
+        const isYes = e.isNecessary === true;
+        const icon = isYes ? 'thumb_up' : 'thumb_down';
+        const color = isYes ? 'var(--green-text)' : 'var(--red-text)';
+        const bg = isYes ? 'var(--pale-green)' : 'var(--pale-red)';
+        const border = isYes ? 'var(--pale-green-border)' : 'var(--pale-red-border)';
+        const qtyText = e.qty > 1 ? `<span style="font-size:11px; color:#888;">(@¥${e.unit_price}×${e.qty})</span>` : '';
+        html += `
+          <div class="history-item" style="padding-left:0;">
+            <div style="display:flex; align-items:center;">
+              <span class="material-symbols-outlined" style="background:${bg}; border:1px solid ${border}; border-radius:4px; padding:4px; font-size:16px; color:${color}; width:24px; text-align:center;">${icon}</span>
+              <div style="margin-left:12px;"><div style="font-weight:bold; font-size:14px;">${e.name} ${qtyText}</div></div>
+            </div>
+            <div style="display:flex; align-items:center;">
+              <span style="font-weight:bold; margin-right:16px;">¥${e.price + e.tax}</span>
+              <button class="outline" style="padding:4px 8px; font-size:12px;" onclick="undoSwipe('${e.id}')">戻す</button>
+            </div>
+          </div>`;
       });
       html += `</div></details>`;
     }
@@ -2277,38 +3155,66 @@
     if (e) { e.isNecessary = null; await fsSaveExpense(e); }
   };
 
-  window.deleteStoreExpenses = function(date, store, event) {
+  window.deleteStoreExpenses = async function(date, store, event) {
     event.stopPropagation();
-    window.customConfirm(`${date} の「${store}」の出費記録をすべて削除しますか？`, async () => {
+    if(confirm(`${date} の「${store}」の出費記録をすべて削除しますか？`)) {
       const targets = window.expenses.filter(e => e.date === date && e.store === store);
       for (const t of targets) await fsDeleteExpense(t.id);
-    });
+    }
   };
 
+  // --- 長押し・一括変更機能 ---
   let pressTimer = null;
   window.startLongPress = function(date, store, event) {
-    pressTimer = window.setTimeout(() => { pressTimer = null; window.openBulkEditModal(date, store); }, 600);
+    pressTimer = window.setTimeout(() => {
+      pressTimer = null;
+      window.openBulkEditModal(date, store);
+    }, 600);
   };
-  window.cancelLongPress = function() { if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; } };
+  window.cancelLongPress = function() {
+    if (pressTimer !== null) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+  };
 
   window.openBulkEditModal = function(date, store) {
     window.cancelLongPress();
-    document.getElementById('bulkEditOriginalDate').value = date; document.getElementById('bulkEditOriginalStore').value = store;
+    document.getElementById('bulkEditOriginalDate').value = date;
+    document.getElementById('bulkEditOriginalStore').value = store;
     document.getElementById('bulkEditTargetDesc').innerText = `対象: ${date} / ${store}`;
-    document.getElementById('bulkEditDate').value = date; document.getElementById('bulkEditStore').value = store;
-    document.getElementById('bulkEditCategory').innerHTML = '<option value="">---</option>' + window.userCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    document.getElementById('bulkEditDate').value = date;
+    document.getElementById('bulkEditStore').value = store;
+    
+    const catSelect = document.getElementById('bulkEditCategory');
+    catSelect.innerHTML = '<option value="">---</option>' + window.userCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+
     document.getElementById('bulkEditModal').classList.remove('hidden');
   };
 
-  window.closeBulkEditModal = function() { document.getElementById('bulkEditModal').classList.add('hidden'); };
+  window.closeBulkEditModal = function() {
+    document.getElementById('bulkEditModal').classList.add('hidden');
+  };
 
   window.executeBulkEdit = async function() {
-    const origDate = document.getElementById('bulkEditOriginalDate').value; const origStore = document.getElementById('bulkEditOriginalStore').value;
-    const newDate = document.getElementById('bulkEditDate').value; const newStore = document.getElementById('bulkEditStore').value.trim(); const newCat = document.getElementById('bulkEditCategory').value;
+    const origDate = document.getElementById('bulkEditOriginalDate').value;
+    const origStore = document.getElementById('bulkEditOriginalStore').value;
+    
+    const newDate = document.getElementById('bulkEditDate').value;
+    const newStore = document.getElementById('bulkEditStore').value.trim();
+    const newCat = document.getElementById('bulkEditCategory').value;
+    
     const targets = window.expenses.filter(e => e.date === origDate && e.store === origStore);
-    if (targets.length === 0) { window.closeBulkEditModal(); return; }
+    if (targets.length === 0) {
+      window.closeBulkEditModal();
+      return;
+    }
+    
     for (const t of targets) {
-      if (newDate) t.date = newDate; if (newStore) t.store = newStore; if (newCat && newCat !== "") t.category = newCat;
+      if (newDate) t.date = newDate;
+      if (newStore) t.store = newStore;
+      if (newCat && newCat !== "") t.category = newCat;
       await fsSaveExpense(t);
     }
     window.closeBulkEditModal();
@@ -2316,30 +3222,71 @@
 
   window.updateHistoryTree = function() {
     const historyList = document.getElementById('historyList');
-    const searchWord = (document.getElementById('historySearchInput')?.value || "").trim().toLowerCase();
+    const searchInput = document.getElementById('historySearchInput');
+    const searchWord = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
     let targetExpenses = window.expenses;
-    if (searchWord) targetExpenses = window.expenses.filter(e => e.name.toLowerCase().includes(searchWord) || e.store.toLowerCase().includes(searchWord) || e.category.toLowerCase().includes(searchWord) || (e.memo && e.memo.toLowerCase().includes(searchWord)));
+    if (searchWord) {
+      targetExpenses = window.expenses.filter(e => 
+        e.name.toLowerCase().includes(searchWord) ||
+        e.store.toLowerCase().includes(searchWord) ||
+        e.category.toLowerCase().includes(searchWord) ||
+        (e.memo && e.memo.toLowerCase().includes(searchWord))
+      );
+    }
 
     if (targetExpenses.length === 0) { historyList.innerHTML = '<p style="color:#888;">出費履歴がありません</p>'; return; }
 
     const byDate = {};
     targetExpenses.forEach(e => {
-      if (!byDate[e.date]) byDate[e.date] = {}; if (!byDate[e.date][e.store]) byDate[e.date][e.store] = [];
+      if (!byDate[e.date]) byDate[e.date] = {};
+      if (!byDate[e.date][e.store]) byDate[e.date][e.store] = [];
       byDate[e.date][e.store].push(e);
     });
 
     let html = '';
     for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
-      let dateTotal = 0; Object.values(byDate[date]).forEach(storeArr => storeArr.forEach(e => { if(!e.isPoint) dateTotal += (e.price + e.tax); }));
-      html += `<details open><summary>${date} <span style="color:#888">¥${dateTotal.toLocaleString()}</span></summary><div>`;
+      let dateTotal = 0;
+      let dateItemCount = 0;
+      Object.values(byDate[date]).forEach(storeArr => storeArr.forEach(e => {
+        if(!e.isPoint) {
+          dateTotal += (e.price + e.tax);
+          // 税金項目は品数に含めない
+          if (e.name !== "外税(消費税)" && e.category !== "税") {
+            dateItemCount += (e.qty || 1);
+          }
+        }
+      }));
+      html += `<details open><summary>${date} <span style="color:#888; font-size:13px;">(${dateItemCount}点) ¥${dateTotal.toLocaleString()}</span></summary><div>`;
       
       for (const store in byDate[date]) {
-        let storeTotal = 0; byDate[date][store].forEach(e => { if(!e.isPoint) storeTotal += (e.price + e.tax); });
+        let storeTotal = 0;
+        let storeItemCount = 0;
+        byDate[date][store].forEach(e => {
+          if(!e.isPoint) {
+            storeTotal += (e.price + e.tax);
+            if (e.name !== "外税(消費税)" && e.category !== "税") {
+              storeItemCount += (e.qty || 1);
+            }
+          }
+        });
         const safeStore = store.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        html += `<details open><summary class="tree-store-summary"><span style="cursor:pointer; user-select: none; -webkit-user-select: none;" onpointerdown="startLongPress('${date}', '${safeStore}', event)" onpointerup="cancelLongPress()" onpointerleave="cancelLongPress()" oncontextmenu="event.preventDefault(); openBulkEditModal('${date}', '${safeStore}'); return false;" title="長押し・右クリックで一括変更"><span style="color:#e0e0e0;">▪</span> ${store} <span style="color:#888; margin-left:4px;">¥${storeTotal.toLocaleString()}</span></span><button class="outline" style="padding:4px 8px; font-size:10px; border-color:var(--pale-red-border); color:var(--red-text);" onclick="deleteStoreExpenses('${date}', '${safeStore}', event)">削除</button></summary><div>`;
         
-        // 常に最新（ID降順）を一番上にする
-        byDate[date][store].sort((a, b) => b.id.localeCompare(a.id)).forEach(e => {
+        html += `<details open><summary class="tree-store-summary">
+          <span style="cursor:pointer; user-select: none; -webkit-user-select: none;" 
+                onpointerdown="startLongPress('${date}', '${safeStore}', event)" 
+                onpointerup="cancelLongPress()" 
+                onpointerleave="cancelLongPress()" 
+                oncontextmenu="event.preventDefault(); openBulkEditModal('${date}', '${safeStore}'); return false;"
+                title="長押し・右クリックで一括変更">
+            <span style="color:#e0e0e0;">▪</span> ${store} <span style="color:#888; margin-left:4px; font-weight:normal; font-size:12px;">(${storeItemCount}点)</span> <span style="color:#888; margin-left:4px;">¥${storeTotal.toLocaleString()}</span>
+          </span>
+          <button class="outline" style="padding:4px 8px; font-size:10px; border-color:var(--pale-red-border); color:var(--red-text);" onclick="deleteStoreExpenses('${date}', '${safeStore}', event)">削除</button>
+        </summary><div>`;
+        
+        byDate[date][store].sort((a, b) => b.id.localeCompare(a.id));
+
+        byDate[date][store].forEach(e => {
           let evalIcon = '<span style="color:#ccc; font-size:12px; margin-right:4px;">ー</span>';
           if (e.isNecessary === true && e.name !== "外税(消費税)") evalIcon = '<span class="material-symbols-outlined" style="background:var(--pale-green); border:1px solid var(--pale-green-border); border-radius:4px; padding:2px 4px; font-size:12px; color:var(--green-text); vertical-align: text-bottom; margin-right:4px;">thumb_up</span>';
           if (e.isNecessary === false) evalIcon = '<span class="material-symbols-outlined" style="background:var(--pale-red); border:1px solid var(--pale-red-border); border-radius:4px; padding:2px 4px; font-size:12px; color:var(--red-text); vertical-align: text-bottom; margin-right:4px;">thumb_down</span>';
@@ -2347,10 +3294,19 @@
           
           const qtyText = e.qty > 1 ? `<span style="font-size:11px; color:#888;">(@¥${e.unit_price}×${e.qty})</span>` : '';
           const memoText = e.memo ? `<div class="memo-badge"><span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">edit_document</span> ${e.memo}</div>` : '';
+
           let amountHtml = `¥${(e.price + e.tax).toLocaleString()}`;
           if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">-${e.pointAmount.toLocaleString()} pt</span>`;
 
-          html += `<div class="history-item" onclick="openEditModal('${e.id}')"><div><div style="font-weight:bold; font-size:14px; color:var(--text-color);">${evalIcon} ${e.name} ${qtyText}</div><div style="font-size:12px; color:#888; margin-top:2px;">${e.category}</div>${memoText}</div><div style="font-weight:bold;">${amountHtml}</div></div>`;
+          html += `
+            <div class="history-item" onclick="openEditModal('${e.id}')">
+              <div>
+                <div style="font-weight:bold; font-size:14px; color:var(--text-color);">${evalIcon} ${e.name} ${qtyText}</div>
+                <div style="font-size:12px; color:#888; margin-top:2px;">${e.category}</div>
+                ${memoText}
+              </div>
+              <div style="font-weight:bold;">${amountHtml}</div>
+            </div>`;
         });
         html += `</div></details>`;
       }
@@ -2362,15 +3318,22 @@
   window.openEditModal = function(id) {
     const e = window.expenses.find(x => x.id === id);
     if(!e) return;
-    document.getElementById('editId').value = e.id; document.getElementById('editDate').value = e.date;
-    document.getElementById('editStore').value = e.store; document.getElementById('editName').value = e.name;
-    document.getElementById('editUnitPrice').value = e.unit_price; document.getElementById('editQty').value = e.qty;
+    document.getElementById('editId').value = e.id;
+    document.getElementById('editDate').value = e.date;
+    document.getElementById('editStore').value = e.store;
+    document.getElementById('editName').value = e.name;
+    document.getElementById('editUnitPrice').value = e.unit_price;
+    document.getElementById('editQty').value = e.qty;
     document.getElementById('editTax').value = e.tax;
     
     const categorySelect = document.getElementById('editCategory');
-    if (!window.userCategories.includes(e.category)) categorySelect.innerHTML += `<option value="${e.category}">${e.category} (旧)</option>`;
+    if (!window.userCategories.includes(e.category)) {
+        categorySelect.innerHTML += `<option value="${e.category}">${e.category} (旧)</option>`;
+    }
     categorySelect.value = e.category;
-    document.getElementById('editMemo').value = e.memo || ""; document.getElementById('editModal').classList.remove('hidden');
+
+    document.getElementById('editMemo').value = e.memo || "";
+    document.getElementById('editModal').classList.remove('hidden');
   };
 
   window.closeEditModal = function() { document.getElementById('editModal').classList.add('hidden'); };
@@ -2379,35 +3342,57 @@
     const id = document.getElementById('editId').value;
     const e = window.expenses.find(x => x.id === id);
     if(e) {
-      const uPrice = parseInt(document.getElementById('editUnitPrice').value) || 0; const q = parseInt(document.getElementById('editQty').value) || 1;
-      e.date = document.getElementById('editDate').value; e.store = document.getElementById('editStore').value;
-      e.name = document.getElementById('editName').value; e.unit_price = uPrice; e.qty = q; e.price = uPrice * q;
-      e.tax = parseInt(document.getElementById('editTax').value) || 0; e.category = document.getElementById('editCategory').value;
+      const uPrice = parseInt(document.getElementById('editUnitPrice').value) || 0;
+      const q = parseInt(document.getElementById('editQty').value) || 1;
+      e.date = document.getElementById('editDate').value;
+      e.store = document.getElementById('editStore').value;
+      e.name = document.getElementById('editName').value;
+      e.unit_price = uPrice;
+      e.qty = q;
+      e.price = uPrice * q;
+      e.tax = parseInt(document.getElementById('editTax').value) || 0;
+      e.category = document.getElementById('editCategory').value;
       e.memo = document.getElementById('editMemo').value;
-      await fsSaveExpense(e); window.closeEditModal();
+      await fsSaveExpense(e);
+      window.closeEditModal();
     }
   };
 
   window.deleteExpense = async function() {
-    window.customConfirm("この記録を完全に削除しますか？", async () => {
+    if(confirm("この記録を完全に削除しますか？")) {
       const id = document.getElementById('editId').value;
-      await fsDeleteExpense(id); window.closeEditModal();
-    });
+      await fsDeleteExpense(id);
+      window.closeEditModal();
+    }
   };
 
   window.showCategoryDetails = function(categoryName) {
-    const selectedMonth = document.getElementById('monthSelector').value; let html = '';
+    const selectedMonth = document.getElementById('monthSelector').value;
+    let html = '';
     if (window.currentAnalysisMode === 'expense') {
-      window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.category === categoryName && !e.isPoint)
-        .sort((a,b) => { if(a.date!==b.date) return b.date.localeCompare(a.date); return b.id.localeCompare(a.id); })
-        .forEach(item => {
-          html += `<div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')"><div><div style="font-weight:bold; font-size:14px;">${item.name}</div><div style="font-size:12px; color:#888;">${item.date} • ${item.store}</div></div><div style="font-weight:bold;">¥${(item.price + item.tax).toLocaleString()}</div></div>`;
+      let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.category === categoryName && !e.isPoint);
+      filtered.forEach(item => {
+        const total = item.price + item.tax;
+        html += `
+          <div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')">
+            <div>
+              <div style="font-weight:bold; font-size:14px;">${item.name}</div>
+              <div style="font-size:12px; color:#888;">${item.date} • ${item.store}</div>
+            </div>
+            <div style="font-weight:bold;">¥${total.toLocaleString()}</div>
+          </div>`;
       });
     } else {
-      window.incomes.filter(i => i.date.startsWith(selectedMonth) && i.source === categoryName)
-        .sort((a,b) => { if(a.date!==b.date) return b.date.localeCompare(a.date); return b.id.localeCompare(a.id); })
-        .forEach(item => {
-          html += `<div class="history-item" onclick="closeCategoryModal(); openEditIncomeModal('${item.id}')"><div><div style="font-weight:bold; font-size:14px;">${item.source}</div><div style="font-size:12px; color:#888;">${item.date}</div></div><div style="font-weight:bold; color:var(--green-text);">+¥${item.amount.toLocaleString()}</div></div>`;
+      let filtered = window.incomes.filter(i => i.date.startsWith(selectedMonth) && i.source === categoryName);
+      filtered.forEach(item => {
+        html += `
+          <div class="history-item" onclick="closeCategoryModal(); openEditIncomeModal('${item.id}')">
+            <div>
+              <div style="font-weight:bold; font-size:14px;">${item.source}</div>
+              <div style="font-size:12px; color:#888;">${item.date}</div>
+            </div>
+            <div style="font-weight:bold; color:var(--green-text);">+¥${item.amount.toLocaleString()}</div>
+          </div>`;
       });
     }
     document.getElementById('categoryModalTitle').innerText = `${selectedMonth} : ${categoryName}`;
@@ -2416,12 +3401,22 @@
   };
 
   window.showWasteDetails = function() {
-    const selectedMonth = document.getElementById('monthSelector').value; let html = '';
-    window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.isNecessary === false && !e.isPoint)
-      .sort((a,b) => { if(a.date!==b.date) return b.date.localeCompare(a.date); return b.id.localeCompare(a.id); })
-      .forEach(item => {
-        html += `<div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')"><div><div style="font-weight:bold; font-size:14px;">${item.name}</div><div style="font-size:12px; color:#888;">${item.date} • ${item.store}</div></div><div style="font-weight:bold; color:var(--red-text);">¥${(item.price + item.tax).toLocaleString()}</div></div>`;
+    const selectedMonth = document.getElementById('monthSelector').value;
+    let html = '';
+    let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.isNecessary === false && !e.isPoint);
+    
+    filtered.forEach(item => {
+      const total = item.price + item.tax;
+      html += `
+        <div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')">
+          <div>
+            <div style="font-weight:bold; font-size:14px;">${item.name}</div>
+            <div style="font-size:12px; color:#888;">${item.date} • ${item.store}</div>
+          </div>
+          <div style="font-weight:bold; color:var(--red-text);">¥${total.toLocaleString()}</div>
+        </div>`;
     });
+    
     document.getElementById('categoryModalTitle').innerText = `${selectedMonth} : 無駄な出費`;
     document.getElementById('categoryModalList').innerHTML = html || '<p style="text-align:center;padding:12px;">無駄な出費はありませんでした！</p>';
     document.getElementById('categoryModal').classList.remove('hidden');
@@ -2429,13 +3424,122 @@
 
   window.closeCategoryModal = function() { document.getElementById('categoryModal').classList.add('hidden'); };
 
+  window.renderCustomPeriodAnalysis = function() {
+    const start = document.getElementById('customStartDate').value;
+    const end = document.getElementById('customEndDate').value;
+    if (!start || !end) return alert("開始日と終了日を選択してください。");
+    if (start > end) return alert("開始日は終了日前の日付にしてください。");
+
+    const expFiltered = window.expenses.filter(e => e.date >= start && e.date <= end && !e.isPoint);
+    const incFiltered = window.incomes.filter(i => i.date >= start && i.date <= end);
+
+    let expTotal = 0;
+    const expByCat = {};
+    expFiltered.forEach(e => {
+      const cost = e.price + e.tax;
+      expTotal += cost;
+      expByCat[e.category] = (expByCat[e.category] || 0) + cost;
+    });
+
+    let incTotal = 0;
+    const incBySrc = {};
+    incFiltered.forEach(i => {
+      incTotal += i.amount;
+      incBySrc[i.source] = (incBySrc[i.source] || 0) + i.amount;
+    });
+
+    const balance = incTotal - expTotal;
+
+    document.getElementById('customPeriodIncomeTotal').innerText = `¥${incTotal.toLocaleString()}`;
+    document.getElementById('customPeriodExpenseTotal').innerText = `¥${expTotal.toLocaleString()}`;
+    
+    const balElem = document.getElementById('customPeriodBalance');
+    balElem.innerText = `${balance >= 0 ? '+' : ''}¥${balance.toLocaleString()}`;
+    balElem.style.color = balance > 0 ? 'var(--green-text)' : (balance < 0 ? 'var(--red-text)' : 'var(--text-color)');
+
+    let expHtml = '';
+    const sortedExpCats = Object.keys(expByCat).sort((a, b) => expByCat[b] - expByCat[a]);
+    if (sortedExpCats.length === 0) {
+      expHtml = '<li style="color:#888; justify-content:center; cursor:default;">期間内の出費はありません</li>';
+    } else {
+      sortedExpCats.forEach((cat, idx) => {
+        const val = expByCat[cat];
+        const pct = expTotal === 0 ? 0 : Math.round((val / expTotal) * 100);
+        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${chartColors[idx % chartColors.length]};margin-right:8px;"></span>`;
+        const safeCat = cat.replace(/'/g, "\\'");
+        expHtml += `<li onclick="showCustomPeriodDetails('expense', '${safeCat}', '${start}', '${end}')">
+          <div style="display:flex; align-items:center;">${dot}${cat}</div>
+          <div><span style="font-weight:bold;">¥${val.toLocaleString()}</span> <span style="color:#888; font-size:12px; margin-left:6px;">${pct}%</span></div>
+        </li>`;
+      });
+    }
+    document.getElementById('customPeriodExpenseList').innerHTML = expHtml;
+
+    let incHtml = '';
+    const sortedIncSrcs = Object.keys(incBySrc).sort((a, b) => incBySrc[b] - incBySrc[a]);
+    if (sortedIncSrcs.length === 0) {
+      incHtml = '<li style="color:#888; justify-content:center; cursor:default;">期間内の収入はありません</li>';
+    } else {
+      sortedIncSrcs.forEach((src, idx) => {
+        const val = incBySrc[src];
+        const pct = incTotal === 0 ? 0 : Math.round((val / incTotal) * 100);
+        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${incomeChartColors[idx % incomeChartColors.length]};margin-right:8px;"></span>`;
+        const safeSrc = src.replace(/'/g, "\\'");
+        incHtml += `<li onclick="showCustomPeriodDetails('income', '${safeSrc}', '${start}', '${end}')">
+          <div style="display:flex; align-items:center;">${dot}${src}</div>
+          <div><span style="font-weight:bold; color:var(--green-text);">+¥${val.toLocaleString()}</span> <span style="color:#888; font-size:12px; margin-left:6px;">${pct}%</span></div>
+        </li>`;
+      });
+    }
+    document.getElementById('customPeriodIncomeList').innerHTML = incHtml;
+
+    document.getElementById('customPeriodResult').classList.remove('hidden');
+  };
+
+  window.showCustomPeriodDetails = function(type, categoryOrSource, start, end) {
+    let html = '';
+    if (type === 'expense') {
+      let filtered = window.expenses.filter(e => e.date >= start && e.date <= end && e.category === categoryOrSource && !e.isPoint);
+      filtered.sort((a, b) => b.date.localeCompare(a.date));
+      filtered.forEach(item => {
+        const total = item.price + item.tax;
+        html += `
+          <div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')">
+            <div>
+              <div style="font-weight:bold; font-size:14px;">${item.name}</div>
+              <div style="font-size:12px; color:#888;">${item.date} • ${item.store}</div>
+            </div>
+            <div style="font-weight:bold;">¥${total.toLocaleString()}</div>
+          </div>`;
+      });
+    } else {
+      let filtered = window.incomes.filter(i => i.date >= start && i.date <= end && i.source === categoryOrSource);
+      filtered.sort((a, b) => b.date.localeCompare(a.date));
+      filtered.forEach(item => {
+        html += `
+          <div class="history-item" onclick="closeCategoryModal(); openEditIncomeModal('${item.id}')">
+            <div>
+              <div style="font-weight:bold; font-size:14px;">${item.source}</div>
+              <div style="font-size:12px; color:#888;">${item.date}</div>
+            </div>
+            <div style="font-weight:bold; color:var(--green-text);">+¥${item.amount.toLocaleString()}</div>
+          </div>`;
+      });
+    }
+    document.getElementById('categoryModalTitle').innerText = `${start}〜${end} : ${categoryOrSource}`;
+    document.getElementById('categoryModalList').innerHTML = html || '<p style="text-align:center;padding:12px;">データがありません</p>';
+    document.getElementById('categoryModal').classList.remove('hidden');
+  };
+
   window.updateMonthSelector = function() {
     const selector = document.getElementById('monthSelector');
     let allData = window.currentAnalysisMode === 'expense' ? window.expenses : window.incomes;
     const months = [...new Set(allData.map(e => e.date.substring(0, 7)))].sort().reverse();
     const currentVal = selector.value;
     selector.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-    if (months.includes(currentVal)) selector.value = currentVal; else if (months.length > 0) selector.value = months[0]; else selector.innerHTML = `<option value="">データなし</option>`;
+    if (months.includes(currentVal)) selector.value = currentVal;
+    else if (months.length > 0) selector.value = months[0];
+    else selector.innerHTML = `<option value="">データなし</option>`;
   };
 
   window.renderCharts = function() {
@@ -2452,64 +3556,119 @@
     document.getElementById('tenDaysTitle').innerText = `${selectedMonth} の10日ごと推移`;
     let chartData = window.currentAnalysisMode === 'expense' ? window.expenses : window.incomes;
     const monthData = chartData.filter(e => e.date.startsWith(selectedMonth));
-    const totals = {}; let monthTotal = 0; let pointTotals = {}; let pointTotalAmount = 0;
+    const totals = {};
+    let monthTotal = 0;
+    
+    let pointTotals = {};
+    let pointTotalAmount = 0;
 
     if(window.currentAnalysisMode === 'expense') {
-      document.getElementById('evaluationCard').classList.remove('hidden'); document.getElementById('pointAnalysisCard').classList.remove('hidden');
-      let yesTotal = 0, noTotal = 0;
+      document.getElementById('evaluationCard').classList.remove('hidden');
+      document.getElementById('pointAnalysisCard').classList.remove('hidden');
+      let yesTotal = 0;
+      let noTotal = 0;
+
       monthData.forEach(e => {
-        if (e.isPoint) { if (e.pointAmount > 0) { if(!pointTotals[e.pointType]) pointTotals[e.pointType] = 0; pointTotals[e.pointType] += e.pointAmount; pointTotalAmount += e.pointAmount; } return; }
+        if (e.isPoint) {
+          if (e.pointAmount > 0) {
+            if(!pointTotals[e.pointType]) pointTotals[e.pointType] = 0;
+            pointTotals[e.pointType] += e.pointAmount;
+            pointTotalAmount += e.pointAmount;
+          }
+          return;
+        }
+
         const cost = e.price + e.tax;
-        if(totals[e.category] !== undefined) totals[e.category] += cost; else totals[e.category] = cost; monthTotal += cost;
-        if (e.isNecessary === true && e.name !== "外税(消費税)") yesTotal += cost; else if (e.isNecessary === false) noTotal += cost;
+        if(totals[e.category] !== undefined) totals[e.category] += cost;
+        else totals[e.category] = cost;
+        monthTotal += cost;
+        
+        if (e.isNecessary === true && e.name !== "外税(消費税)") {
+          yesTotal += cost;
+        } else if (e.isNecessary === false) {
+          noTotal += cost;
+        }
       });
+      
       const reviewedTotal = yesTotal + noTotal;
       const yesPct = reviewedTotal === 0 ? 0 : Math.round((yesTotal / reviewedTotal) * 100);
       const noPct = reviewedTotal === 0 ? 0 : Math.round((noTotal / reviewedTotal) * 100);
       
       document.getElementById('evaluationStats').innerHTML = `
-        <div style="flex:1; text-align:center;"><div style="font-size:14px; color:#888; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">thumb_up</span> 必要 (${yesPct}%)</div><div style="font-weight:bold; color:var(--green-text); font-size: 18px;">¥${yesTotal.toLocaleString()}</div></div>
-        <div style="flex:1; text-align:center; border-left:1px solid var(--border-color); cursor:pointer; padding-bottom: 4px;" onclick="showWasteDetails()"><div style="font-size:14px; color:#888; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">thumb_down</span> 無駄 (${noPct}%)</div><div style="font-weight:bold; color:var(--red-text); font-size: 18px;">¥${noTotal.toLocaleString()}</div><div style="color:var(--red-text); font-size:13px; margin-top: 8px; font-weight:bold;"><span style="border-bottom: 1px solid var(--red-text); padding-bottom: 1px; display:inline-flex; align-items:center; gap:4px;">品目を詳しくみる <span class="material-symbols-outlined" style="font-size:14px;">search</span></span></div></div>`;
+        <div style="flex:1; text-align:center;">
+          <div style="font-size:14px; color:#888; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">thumb_up</span> 必要 (${yesPct}%)</div>
+          <div style="font-weight:bold; color:var(--green-text); font-size: 18px;">¥${yesTotal.toLocaleString()}</div>
+        </div>
+        <div style="flex:1; text-align:center; border-left:1px solid var(--border-color); cursor:pointer; padding-bottom: 4px;" onclick="showWasteDetails()">
+          <div style="font-size:14px; color:#888; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">thumb_down</span> 無駄 (${noPct}%)</div>
+          <div style="font-weight:bold; color:var(--red-text); font-size: 18px;">¥${noTotal.toLocaleString()}</div>
+          <div style="color:var(--red-text); font-size:13px; margin-top: 8px; font-weight:bold;">
+            <span style="border-bottom: 1px solid var(--red-text); padding-bottom: 1px; display:inline-flex; align-items:center; gap:4px;">品目を詳しくみる <span class="material-symbols-outlined" style="font-size:14px;">search</span></span>
+          </div>
+        </div>
+      `;
 
+      // ポイントグラフ描画
       if (pointTotalAmount > 0) {
+        const ptCtx = document.getElementById('pointChart').getContext('2d');
         if (window.pointChartInstance) window.pointChartInstance.destroy();
-        window.pointChartInstance = new Chart(document.getElementById('pointChart').getContext('2d'), {
-          type: 'doughnut', data: { labels: Object.keys(pointTotals), datasets: [{ data: Object.values(pointTotals), backgroundColor: chartColors, borderWidth: 0 }] },
+        
+        window.pointChartInstance = new Chart(ptCtx, {
+          type: 'doughnut',
+          data: { labels: Object.keys(pointTotals), datasets: [{ data: Object.values(pointTotals), backgroundColor: chartColors, borderWidth: 0 }] },
           options: { responsive: true, plugins: { legend: { display: false } }, cutout: '70%' }
         });
         
-        let pLegendHtml = ''; let pColorIndex = 0;
+        let pLegendHtml = '';
+        let pColorIndex = 0;
         for (const ptCat of Object.keys(pointTotals).sort((a,b) => pointTotals[b] - pointTotals[a])) {
-          const val = pointTotals[ptCat]; const pct = pointTotalAmount === 0 ? 0 : Math.round((val / pointTotalAmount) * 100);
+          const val = pointTotals[ptCat];
+          const pct = pointTotalAmount === 0 ? 0 : Math.round((val / pointTotalAmount) * 100);
           const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${chartColors[pColorIndex % chartColors.length]};margin-right:8px;"></span>`;
-          pLegendHtml += `<li><div>${dot}${ptCat}</div> <div><span>${val.toLocaleString()} pt</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`; pColorIndex++;
+          pLegendHtml += `<li><div>${dot}${ptCat}</div> <div><span>${val.toLocaleString()} pt</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+          pColorIndex++;
         }
         pLegendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:var(--primary); font-weight:bold;">${pointTotalAmount.toLocaleString()} pt</span></li>`;
-        document.getElementById('pointChartLegend').innerHTML = pLegendHtml; document.getElementById('pointChart').classList.remove('hidden');
+        document.getElementById('pointChartLegend').innerHTML = pLegendHtml;
+        document.getElementById('pointChart').classList.remove('hidden');
       } else {
         if (window.pointChartInstance) window.pointChartInstance.destroy();
         document.getElementById('pointChart').classList.add('hidden');
         document.getElementById('pointChartLegend').innerHTML = '<li style="justify-content:center; color:#888; padding:20px; border:none; cursor:default;">ポイント利用はありません</li>';
       }
+
     } else {
-      document.getElementById('evaluationCard').classList.add('hidden'); document.getElementById('pointAnalysisCard').classList.add('hidden');
-      monthData.forEach(i => { if(!totals[i.source]) totals[i.source] = 0; totals[i.source] += i.amount; monthTotal += i.amount; });
+      document.getElementById('evaluationCard').classList.add('hidden');
+      document.getElementById('pointAnalysisCard').classList.add('hidden');
+      monthData.forEach(i => {
+        if(!totals[i.source]) totals[i.source] = 0;
+        totals[i.source] += i.amount; monthTotal += i.amount;
+      });
     }
 
     const currentPieColors = window.currentAnalysisMode === 'expense' ? chartColors : incomeChartColors;
     const currentBarColors = window.currentAnalysisMode === 'expense' ? barColors : incomeBarColors;
 
+    const dCtx = document.getElementById('expenseChart').getContext('2d');
     if (window.doughnutChartInstance) window.doughnutChartInstance.destroy();
-    window.doughnutChartInstance = new Chart(document.getElementById('expenseChart').getContext('2d'), {
-      type: 'doughnut', data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: currentPieColors, borderWidth: 0 }] },
-      options: { responsive: true, plugins: { legend: { display: false } }, cutout: '70%', onClick: (e, elements) => { if (elements.length > 0) window.showCategoryDetails(window.doughnutChartInstance.data.labels[elements[0].index]); } }
+    
+    window.doughnutChartInstance = new Chart(dCtx, {
+      type: 'doughnut',
+      data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: currentPieColors, borderWidth: 0 }] },
+      options: { 
+        responsive: true, plugins: { legend: { display: false } }, cutout: '70%',
+        onClick: (e, elements) => { if (elements.length > 0) window.showCategoryDetails(window.doughnutChartInstance.data.labels[elements[0].index]); }
+      }
     });
 
-    let legendHtml = ''; let colorIndex = 0;
+    let legendHtml = '';
+    let colorIndex = 0;
     for (const cat of Object.keys(totals).sort((a,b) => totals[b] - totals[a])) {
-      const val = totals[cat]; const pct = monthTotal === 0 ? 0 : Math.round((val / monthTotal) * 100);
+      const val = totals[cat];
+      const pct = monthTotal === 0 ? 0 : Math.round((val / monthTotal) * 100);
       const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${currentPieColors[colorIndex % currentPieColors.length]};margin-right:8px;"></span>`;
-      legendHtml += `<li onclick="showCategoryDetails('${cat}')"><div>${dot}${cat}</div> <div><span>¥${val.toLocaleString()}</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`; colorIndex++;
+      legendHtml += `<li onclick="showCategoryDetails('${cat}')"><div>${dot}${cat}</div> <div><span>¥${val.toLocaleString()}</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+      colorIndex++;
     }
     legendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:${window.currentAnalysisMode === 'expense' ? 'var(--primary)' : 'var(--green-text)'}; font-weight:bold;">¥${monthTotal.toLocaleString()}</span></li>`;
     document.getElementById('chartLegend').innerHTML = legendHtml;
@@ -2519,12 +3678,16 @@
       if (e.isPoint) return;
       const day = parseInt(e.date.split('-')[2], 10);
       const amount = window.currentAnalysisMode === 'expense' ? (e.price + e.tax) : e.amount;
-      blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += amount;
+      if (day <= 10) blockTotals[0] += amount;
+      else if (day <= 20) blockTotals[1] += amount;
+      else blockTotals[2] += amount;
     });
 
+    const tdCtx = document.getElementById('tenDaysChart').getContext('2d');
     if (window.tenDaysChartInstance) window.tenDaysChartInstance.destroy();
-    window.tenDaysChartInstance = new Chart(document.getElementById('tenDaysChart').getContext('2d'), {
-      type: 'bar', data: { labels: ['上旬', '中旬', '下旬'], datasets: [{ data: blockTotals, backgroundColor: currentBarColors, borderRadius: 6 }] },
+    window.tenDaysChartInstance = new Chart(tdCtx, {
+      type: 'bar',
+      data: { labels: ['上旬', '中旬', '下旬'], datasets: [{ data: blockTotals, backgroundColor: currentBarColors, borderRadius: 6 }] },
       options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 
@@ -2535,64 +3698,116 @@
     let allData = window.currentAnalysisMode === 'expense' ? window.expenses : window.incomes;
     let allMonths = [...new Set(allData.map(e => e.date.substring(0, 7)))].sort();
     let targetMonths = allMonths.slice(-12);
-    if(targetMonths.length === 0) targetMonths = [new Date().toISOString().substring(0, 7)];
+    
+    if(targetMonths.length === 0) {
+      const todayMonth = new Date().toISOString().substring(0, 7);
+      targetMonths = [todayMonth];
+    }
 
-    document.getElementById('trendChartContainer').style.minWidth = Math.max(100, targetMonths.length * 15) + '%';
-    document.getElementById('evalTrendChartContainer').style.minWidth = Math.max(100, targetMonths.length * 15) + '%';
+    const minWidth = Math.max(100, targetMonths.length * 15) + '%';
+    document.getElementById('trendChartContainer').style.minWidth = minWidth;
+    document.getElementById('evalTrendChartContainer').style.minWidth = minWidth;
 
+    const tCtx = document.getElementById('trendChart').getContext('2d');
     if (window.trendChartInstance) window.trendChartInstance.destroy();
+
+    const evalCard = document.getElementById('evalTrendCard');
+    const etCtx = document.getElementById('evalTrendChart').getContext('2d');
     if (window.evalTrendChartInstance) window.evalTrendChartInstance.destroy();
 
     if (window.currentAnalysisMode === 'expense') {
       document.getElementById('trendChartTitle').innerText = '一年間の推移 (出費項目別)';
-      document.getElementById('evalTrendCard').classList.remove('hidden');
+      evalCard.classList.remove('hidden');
 
       const expenseCategories = [...new Set(window.expenses.map(e => e.category))].filter(c => c !== "ポイント利用");
-      const datasets = expenseCategories.map((cat, i) => ({
-        label: cat, backgroundColor: chartColors[i % chartColors.length],
-        data: targetMonths.map(m => window.expenses.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0))
-      }));
-
-      window.trendChartInstance = new Chart(document.getElementById('trendChart').getContext('2d'), {
-        type: 'bar', data: { labels: targetMonths, datasets: datasets },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } } }
+      const datasets = expenseCategories.map((cat, i) => {
+        return {
+          label: cat,
+          data: targetMonths.map(m => {
+            return window.expenses.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0);
+          }),
+          backgroundColor: chartColors[i % chartColors.length]
+        };
       });
 
-      const yesData = [], noData = [];
+      window.trendChartInstance = new Chart(tCtx, {
+        type: 'bar',
+        data: { labels: targetMonths, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }
+        }
+      });
+
+      const yesData = [];
+      const noData = [];
       targetMonths.forEach(m => {
         let y = 0, n = 0;
         window.expenses.filter(e => e.date.startsWith(m) && !e.isPoint).forEach(e => {
           const cost = e.price + e.tax;
-          if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost; else if (e.isNecessary === false) n += cost;
+          if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
+          else if (e.isNecessary === false) n += cost;
         });
         const total = y + n;
-        if(total > 0) { yesData.push(Math.round((y / total) * 100)); noData.push(Math.round((n / total) * 100)); } else { yesData.push(0); noData.push(0); }
+        if(total > 0) {
+          yesData.push(Math.round((y / total) * 100));
+          noData.push(Math.round((n / total) * 100));
+        } else {
+          yesData.push(0);
+          noData.push(0);
+        }
       });
 
-      window.evalTrendChartInstance = new Chart(document.getElementById('evalTrendChart').getContext('2d'), {
+      window.evalTrendChartInstance = new Chart(etCtx, {
         type: 'bar',
-        data: { labels: targetMonths, datasets: [ { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 }, { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 } ] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
+        data: {
+          labels: targetMonths,
+          datasets: [
+            { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 },
+            { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, min: 0, max: 100, ticks: { callback: function(value) { return value + "%" } } }
+          },
+          plugins: {
+            tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + '%'; } } },
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } }
+          }
+        }
       });
 
     } else {
       document.getElementById('trendChartTitle').innerText = '一年間の推移 (収入源別)';
-      document.getElementById('evalTrendCard').classList.add('hidden');
+      evalCard.classList.add('hidden');
 
       const allSources = [...new Set(window.incomes.map(i => i.source))];
-      const datasets = allSources.map((src, i) => ({
-        label: src, backgroundColor: incomeChartColors[i % incomeChartColors.length],
-        data: targetMonths.map(m => window.incomes.filter(inc => inc.date.startsWith(m) && inc.source === src).reduce((sum, inc) => sum + inc.amount, 0))
-      }));
+      const datasets = allSources.map((src, i) => {
+        return {
+          label: src,
+          data: targetMonths.map(m => {
+            return window.incomes.filter(inc => inc.date.startsWith(m) && inc.source === src).reduce((sum, inc) => sum + inc.amount, 0);
+          }),
+          backgroundColor: incomeChartColors[i % incomeChartColors.length]
+        };
+      });
 
-      window.trendChartInstance = new Chart(document.getElementById('trendChart').getContext('2d'), {
-        type: 'bar', data: { labels: targetMonths, datasets: datasets },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } } }
+      window.trendChartInstance = new Chart(tCtx, {
+        type: 'bar',
+        data: { labels: targetMonths, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }
+        }
       });
     }
   }
 
-  // 専門家AIアドバイス用短縮プロンプト
   window.getExpertAIAdvice = async function() {
     const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) return alert("APIキーが設定されていません。");
@@ -2600,7 +3815,7 @@
     if(!selectedMonth) return alert("データがありません。");
 
     const adviceElem = document.getElementById('aiAdvice');
-    adviceElem.innerText = "AIが分析中...";
+    adviceElem.innerText = "経理の専門家AIがデータを精査しています...";
     
     let isExp = window.currentAnalysisMode === 'expense';
     let monthData = (isExp ? window.expenses : window.incomes).filter(e => e.date.startsWith(selectedMonth));
@@ -2613,31 +3828,42 @@
 
     const payload = {
       contents: [{
-        parts: [{ text: `個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを生成。
-条件：10日ごとのペース配分への言及、具体的改善策。
+        parts: [{ text: `個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを出力してください。
+条件:10日ごとのペース配分への言及、具体的改善策の提示。
 対象月:${selectedMonth} 上旬:¥${blockTotals[0]} 中旬:¥${blockTotals[1]} 下旬:¥${blockTotals[2]}
 データ:${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
         }]
       }],
-      generationConfig: { responseMimeType: "text/plain" }
+      generationConfig: {
+        temperature: 0,
+      }
     };
 
-    let modelName = 'gemini-3.8-flash';
+    const targetModel = 'gemini-3.7-flash';
     let response;
     try {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    } catch(fetchError) { return adviceElem.innerText = "ネットワークエラーが発生しました。"; }
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload)
+      });
+    } catch(fetchError) {
+      adviceElem.innerText = "ネットワークエラーが発生しました。";
+      return;
+    }
 
     if (!response.ok) {
-      modelName = 'gemini-3.8-flash';
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) return adviceElem.innerText = `分析に失敗しました。(${response.status})`;
+      adviceElem.innerText = `分析に失敗しました。(${response.status})`;
+      return;
     }
 
     try {
       const result = await response.json();
       adviceElem.innerText = result.candidates[0].content.parts[0].text;
-    } catch (error) { adviceElem.innerText = `分析結果の読み取りに失敗しました。`; }
+    } catch (error) { 
+      console.error(error);
+      adviceElem.innerText = `分析結果の読み取りに失敗しました。`; 
+    }
   };
 
   window.exportCSV = function() {
