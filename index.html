@@ -336,7 +336,7 @@
         <div style="margin-top: 8px; font-size: 12px;">
           <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">APIキーの発行、導入方法はこちら</a>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.8-flash</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
       </div>
 
       <div class="card">
@@ -928,8 +928,8 @@
   window.books = [{id: 'default', name: 'メイン'}];
   window.currentBookId = 'default';
 
-  // カテゴリ設定 (食費(雑)を外食と弁当に分割)
-  const defaultCategories = ["食費(純)", "食費(外食)", "食費(弁当)", "経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "雑費", "税"];
+  // カテゴリ設定 (食費(雑)を外食・弁当・嗜好品に分割)
+  const defaultCategories = ["食費(純)", "食費(外食)", "食費(弁当)", "食費(嗜好品)", "経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "雑費", "税"];
   window.userCategories = [...defaultCategories];
   window.aiAutoCategory = true;
 
@@ -983,13 +983,21 @@
     const legacyExpenses = window.expenses.filter(e => e.category === "経費" || e.category === "食費(雑)");
     if (legacyExpenses.length === 0) return;
 
-    const targetModel = 'gemini-3.8-flash';
+    const targetModel = 'gemini-3.7-flash';
+    const validNewCats = ["経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "食費(外食)", "食費(弁当)", "食費(嗜好品)"];
     const payload = {
       contents: [{
-        parts: [{ text: `以下の出費リストのカテゴリを再分類してください。
-・元が「経費」のもの -> 「経費(日用品)」「経費(交通費)」「経費(公共料金)」「経費(その他)」のいずれか
-・元が「食費(雑)」のもの -> 飲食店での食事は「食費(外食)」、中食・惣菜・弁当・飲み物等は「食費(弁当)」のいずれか
-データ: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: e.store, old_cat: e.category})))}` }]
+        parts: [{ text: `Reclassify items based on old_cat, store, and name.
+If old_cat=="経費":
+- "経費(日用品)": Consumables, toiletries, drugstore/household goods
+- "経費(交通費)": Transit, train, taxi, IC card, fuel, parking
+- "経費(公共料金)": Utilities (electricity, gas, water, telecom)
+- "経費(その他)": Other necessary/business expenses
+If old_cat=="食費(雑)":
+- "食費(外食)": Restaurant dining, cafe, fast food, takeout
+- "食費(弁当)": Supermarket/convenience store bento, ready-made deli/side dishes
+- "食費(嗜好品)": Snacks, sweets, desserts, beverages, alcohol
+Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: e.store, old_cat: e.category})))}` }]
       }],
       generationConfig: {
         responseMimeType: "application/json",
@@ -1003,8 +1011,9 @@
                 type: "OBJECT",
                 properties: {
                   id: { type: "STRING" },
-                  category: { type: "STRING" }
-                }
+                  category: { type: "STRING", enum: validNewCats }
+                },
+                required: ["id", "category"]
               }
             }
           }
@@ -1023,7 +1032,6 @@
         
         if (parsed.items) {
           let updatedCount = 0;
-          const validNewCats = ["経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "食費(外食)", "食費(弁当)"];
           for (const item of parsed.items) {
             const exp = window.expenses.find(e => e.id === item.id);
             if (exp && validNewCats.includes(item.category)) {
@@ -1991,11 +1999,17 @@
           });
           catUpdated = true;
         }
-        // 過去の「食費(雑)」設定を「食費(外食)」「食費(弁当)」に置き換え
+        // 過去の「食費(雑)」設定を「食費(外食)」「食費(弁当)」「食費(嗜好品)」に置き換え
         if (window.userCategories.includes("食費(雑)")) {
           const idx = window.userCategories.indexOf("食費(雑)");
-          window.userCategories.splice(idx, 1, "食費(外食)", "食費(弁当)");
+          window.userCategories.splice(idx, 1, "食費(外食)", "食費(弁当)", "食費(嗜好品)");
           window.userCategories = [...new Set(window.userCategories)];
+          catUpdated = true;
+        }
+        // 既に「食費(弁当)」があり「食費(嗜好品)」が未追加の場合も自動で追加
+        if (window.userCategories.includes("食費(弁当)") && !window.userCategories.includes("食費(嗜好品)")) {
+          const idx = window.userCategories.indexOf("食費(弁当)");
+          window.userCategories.splice(idx + 1, 0, "食費(嗜好品)");
           catUpdated = true;
         }
         if (catUpdated) window.saveUserSettings();
@@ -2799,28 +2813,35 @@
       const compressedDataUrl = await compressImage(file);
       const base64String = compressedDataUrl.split(',')[1];
 
+      const allowedCategories = window.userCategories.includes("税") 
+        ? window.userCategories 
+        : [...window.userCategories, "税"];
+
       let catInstructions = window.aiAutoCategory
-        ? `[${window.userCategories.join(', ')}]のいずれかに分類。
-分類基準:
-- 食費(純): 料理用材料、生食可能な果物
-- 食費(外食): 飲食店での食事、カフェ等
-- 食費(弁当): 中食、弁当、惣菜、完成済み料理、飲料
-- 雑費: 交際費、レジャー、銭湯など該当なしのもの
-- 経費: (日用品/交通費/公共料金/その他) から選択
-- 税: 単独の税`
-        : `全て「${window.userCategories[0] || '未分類'}」に分類`;
+        ? `Classify into [${allowedCategories.join(', ')}] using MECE rules:
+- "食費(純)": Raw cooking ingredients, fresh fruits, staples (meat, veg, rice, seasonings)
+- "食費(外食)": Restaurant dining, cafe, fast food, takeout
+- "食費(弁当)": Store-bought bento, ready-made deli/side dishes, sandwiches
+- "食費(嗜好品)": Snacks, sweets, desserts, all beverages, alcohol
+- "経費(日用品)": Daily consumables, toiletries, cleaning/drugstore items
+- "経費(交通費)": Train, bus, taxi, IC charge, fuel, tolls, parking
+- "経費(公共料金)": Utilities (electricity, gas, water, telecom, internet)
+- "経費(その他)": Other necessary expenses, medical, stationery, fees
+- "雑費": Socializing, leisure, entertainment, bathhouse (sento), others
+- "税": Standalone external tax only`
+        : `Set all item categories to "${window.userCategories[0] || '未分類'}" (except standalone tax -> "税").`;
 
       const payload = {
         contents: [{
           parts: [
-            { text: `画像(レシート等)を解析しJSONを出力。
-ルール:
-1. 不明・非対象は {"error":"認識不可"} を返す。
-2. unit_price(単価), qty(数量), price(合計額)を分ける。
-3. 税込はpriceに含め、外税は name:"外税(消費税)", category:"税" として独立。
-4. 途切れた商品名はLLMの知識で妥当な名称に補完。
-5. 店名の支店名は除外(例: セブンイレブン)。
-6. カテゴリ: ${catInstructions}`
+            { text: `Extract receipt data into JSON. All text outputs (store, name, category) MUST be in Japanese.
+Rules:
+1. If unreadable/not a receipt, return {"error":"認識不可"}.
+2. Split unit_price, qty, and price (unit_price * qty).
+3. Include internal tax in price. Extract external tax as a separate item: name="外税(消費税)", category="税".
+4. Infer and complete truncated Japanese product names using your knowledge before classifying.
+5. Remove branch names from store (e.g. "セブンイレブン").
+6. Category: ${catInstructions}`
             },
             {
               inline_data: { mime_type: "image/jpeg", data: base64String }
@@ -2845,9 +2866,10 @@
                     qty: { type: "INTEGER" },
                     price: { type: "INTEGER" },
                     tax: { type: "INTEGER" },
-                    category: { type: "STRING" },
+                    category: { type: "STRING", enum: allowedCategories },
                     memo: { type: "STRING" }
-                  }
+                  },
+                  required: ["date", "store", "name", "unit_price", "qty", "price", "tax", "category"]
                 }
               },
               error: { type: "STRING" }
@@ -2856,7 +2878,7 @@
         }
       };
 
-      const targetModel = 'gemini-3.8-flash';
+      const targetModel = 'gemini-3.7-flash';
       let response;
       try {
         response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -3839,7 +3861,7 @@
       }
     };
 
-    const targetModel = 'gemini-3.8-flash';
+    const targetModel = 'gemini-3.7-flash';
     let response;
     try {
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
