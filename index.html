@@ -3850,10 +3850,13 @@ Rules:
 
     const payload = {
       contents: [{
-        parts: [{ text: `個人の${isExp ? '出費' : '収入'}データを分析し、350文字以内でアドバイスを出力してください。
-条件:10日ごとのペース配分への言及、具体的改善策の提示。
-対象月:${selectedMonth} 上旬:¥${blockTotals[0]} 中旬:¥${blockTotals[1]} 下旬:¥${blockTotals[2]}
-データ:${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
+        parts: [{ text: `Act as a professional accountant. Analyze this personal ${isExp ? 'expense' : 'income'} data and provide strict, actionable advice in Japanese within 350 characters.
+Rules:
+1. Must output in Japanese.
+2. Comment on the 10-day spending/income pace (Early, Mid, Late month).
+3. Suggest specific improvements based on categories, items, and necessity (v: true=necessary, false=waste).
+Month: ${selectedMonth} | Early(1-10th): ¥${blockTotals[0]}, Mid(11-20th): ¥${blockTotals[1]}, Late(21st+): ¥${blockTotals[2]}
+Data: ${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
         }]
       }],
       generationConfig: {
@@ -3864,7 +3867,7 @@ Rules:
     const targetModel = 'gemini-3.7-flash';
     let response;
     try {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify(payload)
