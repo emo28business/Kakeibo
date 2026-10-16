@@ -336,7 +336,7 @@
         <div style="margin-top: 8px; font-size: 12px;">
           <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">APIキーの発行、導入方法はこちら</a>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.8-flash</p>
       </div>
 
       <div class="card">
@@ -983,7 +983,7 @@
     const legacyExpenses = window.expenses.filter(e => e.category === "経費" || e.category === "食費(雑)");
     if (legacyExpenses.length === 0) return;
 
-    const targetModel = 'gemini-3.7-flash';
+    const targetModel = 'gemini-3.8-flash';
     const payload = {
       contents: [{
         parts: [{ text: `以下の出費リストのカテゴリを再分類してください。
@@ -2856,7 +2856,7 @@
         }
       };
 
-      const targetModel = 'gemini-3.7-flash';
+      const targetModel = 'gemini-3.8-flash';
       let response;
       try {
         response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -3839,7 +3839,7 @@
       }
     };
 
-    const targetModel = 'gemini-3.7-flash';
+    const targetModel = 'gemini-3.8-flash';
     let response;
     try {
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
