@@ -336,7 +336,7 @@
         <div style="margin-top: 8px; font-size: 12px;">
           <a href="https://note.com/kazu_t/n/n9adffe09bd6b" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">APIキーの発行、導入方法はこちら</a>
         </div>
-        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.8-flash</p>
+        <p id="currentModelDisplay" style="font-size: 11px; color: #888; margin-top: 8px; text-align: right; font-weight:bold;">使用AIモデル: gemini-3.7-flash</p>
       </div>
 
       <div class="card">
@@ -983,7 +983,7 @@
     const legacyExpenses = window.expenses.filter(e => e.category === "経費" || e.category === "食費(雑)");
     if (legacyExpenses.length === 0) return;
 
-    const targetModel = 'gemini-3.8-flash';
+    const targetModel = 'gemini-3.7-flash';
     const validNewCats = ["経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "食費(外食)", "食費(弁当)", "食費(嗜好品)"];
     const payload = {
       contents: [{
@@ -2878,7 +2878,7 @@ Rules:
         }
       };
 
-      const targetModel = 'gemini-3.8-flash';
+      const targetModel = 'gemini-3.7-flash';
       let response;
       try {
         response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -3864,7 +3864,7 @@ Data: ${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.dat
       }
     };
 
-    const targetModel = 'gemini-3.8-flash';
+    const targetModel = 'gemini-3.7-flash';
     let response;
     try {
       response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
