@@ -356,8 +356,7 @@
         <input type="file" id="fallbackCameraInput" accept="image/*" capture="environment" class="hidden" onchange="window.handleImageUpload(event)">
         
         <p style="font-size: 11px; color: #888; text-align: center; margin-top: 12px;">※レシート以外にも、請求書やスクショ等からの文字情報も解析できます</p>
-        <div id="ocrProgress" class="hidden" role="status" style="margin-top:16px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span id="ocrProgressStage"></span><span id="ocrProgressPercent">0%</span></div><progress id="ocrProgressBar" max="100" value="0" aria-label="解析の進行目安" style="width:100%;height:18px;"></progress><small>処理段階に応じた進行の目安です。</small></div>
-<p id="loadingMsg" class="hidden" style="color: var(--primary); font-size: 14px; font-weight: bold; text-align: center; margin-top: 16px;">AIが解析中...</p>
+        <p id="loadingMsg" class="hidden" style="color: var(--primary); font-size: 14px; font-weight: bold; text-align: center; margin-top: 16px;">AIが解析中...</p>
       </div>
 
       <div class="card" id="manualForm">
@@ -365,7 +364,7 @@
         <label>日付</label>
         <div style="display: flex; gap: 8px; margin-bottom: 16px;">
           <input type="date" id="inputDate" style="margin-bottom: 0; flex: 1;">
-          <button onclick="document.getElementById('inputDate').value = window.kakeibotToday()" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
+          <button onclick="document.getElementById('inputDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
         </div>
         <label>店名</label><input type="text" id="inputStore" placeholder="例: セブンイレブン">
         <label>商品名</label><input type="text" id="inputName" placeholder="例: コーヒー">
@@ -392,7 +391,7 @@
         <label>日付</label>
         <div style="display: flex; gap: 8px; margin-bottom: 16px;">
           <input type="date" id="incomeDate" style="margin-bottom: 0; flex: 1;">
-          <button onclick="document.getElementById('incomeDate').value = window.kakeibotToday()" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
+          <button onclick="document.getElementById('incomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
         </div>
         <label>収入源</label>
         <input type="text" id="incomeSource" list="incomeSourceOptions" placeholder="例: 給与、副業、メルカリ">
@@ -463,13 +462,6 @@
         <h3 style="font-size: 14px; margin-bottom: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">登録中のサブスク一覧</h3>
         <div id="subscriptionList"></div>
       </div>
-      <div class="card">
-        <h2>友人・家族との貸し借り</h2>
-        <p style="font-size:12px;color:#888;">貸した・借りた金額と返済状況を管理します。家計簿の収支には加算されません。</p>
-        <div id="loanSummary" style="margin-bottom:12px;font-weight:bold;"></div>
-        <button onclick="openLoanEdit()" style="width:100%;margin-bottom:12px;">貸し借りを登録</button>
-        <div id="loanList"></div>
-      </div>
     </div>
 
     <!-- 3. 整理(スワイプ)タブ -->
@@ -501,7 +493,6 @@
         </div>
         <button onclick="renderCustomPeriodAnalysis()" style="width: 100%; padding: 10px; margin-bottom: 12px;">この期間で集計</button>
         
-        <div id="customSavings"></div>
         <div id="customPeriodResult" class="hidden" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 8px;">
           <div style="display: flex; gap: 8px; margin-bottom: 16px;">
             <div style="flex: 1; background: var(--pale-green); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--pale-green-border);">
@@ -589,7 +580,6 @@
           <h2 style="margin: 0; color: #fff;"><span class="material-symbols-outlined" style="font-size:20px; margin-right:6px; color:#ddd;">auto_awesome</span> 経理AIのアドバイス</h2>
           <button class="outline" style="color: #fff; border-color: #888; padding: 6px 12px; font-size: 12px; background: rgba(255,255,255,0.1);" onclick="getExpertAIAdvice()">診断する</button>
         </div>
-        <div id="adviceProgress" class="hidden" role="status"><span id="adviceProgressStage"></span> <span id="adviceProgressPercent">0%</span><progress id="adviceProgressBar" max="100" value="0" aria-label="診断の進行目安" style="width:100%"></progress><small>処理段階に応じた進行の目安です。</small></div>
         <p id="aiAdvice" style="font-size: 14px; line-height: 1.6; color: #eeeeee; margin-top: 12px;">「診断する」ボタンを押すと、プロの経理AIが選択された月のデータやトレンドを厳格に分析します。</p>
       </div>
     </div>
@@ -739,7 +729,7 @@
       <label>日付</label>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="date" id="editDate" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('editDate').value = window.kakeibotToday()" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
+        <button onclick="document.getElementById('editDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
       </div>
       <label>店名</label><input type="text" id="editStore">
       <label>商品名</label><input type="text" id="editName">
@@ -768,7 +758,7 @@
       <label>日付</label>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="date" id="editIncomeDate" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('editIncomeDate').value = window.kakeibotToday()" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
+        <button onclick="document.getElementById('editIncomeDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
       </div>
       <label>収入源</label><input type="text" id="editIncomeSource">
       <label>金額</label><input type="number" id="editIncomeAmount">
@@ -841,13 +831,12 @@
         内容を確認し、必要に応じて修正してください。
       </p>
       
-      <div id="ocrYearWarning" class="update-notice hidden" role="alert"></div>
       <!-- レシート全体の設定 -->
       <div style="background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
         <label>日付 (一括変更)</label>
         <div style="display: flex; gap: 8px; margin-bottom: 8px;">
           <input type="date" id="ocrBatchDate" style="margin-bottom: 0; flex: 1;">
-          <button onclick="document.getElementById('ocrBatchDate').value = window.kakeibotToday(); updateOcrYearWarning()" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
+          <button onclick="document.getElementById('ocrBatchDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
         </div>
         <label>店名 (一括変更)</label>
         <input type="text" id="ocrBatchStore" style="margin-bottom: 0;">
@@ -862,7 +851,7 @@
           <select id="ocrPointType" style="margin-bottom:0; flex:1;" onchange="window.handlePointTypeChange(this)">
             <option value="">使わない</option>
           </select>
-          <input type="number" id="ocrPointAmount" placeholder="ポイント値引き額（円）" style="margin-bottom:0; flex:1;" min="0">
+          <input type="number" id="ocrPointAmount" placeholder="利用ポイント数" style="margin-bottom:0; flex:1;" min="0">
         </div>
       </div>
 
@@ -880,7 +869,7 @@
   <!-- 一括変更モーダル -->
   <div id="bulkEditModal" class="modal-overlay hidden" style="z-index: 2000;">
     <div class="modal-content">
-      <h2 style="margin-bottom: 16px;">記録の一括編集</h2>
+      <h2 style="margin-bottom: 16px;">一括変更 (日付・店名)</h2>
       <p style="font-size: 12px; color: #888; margin-bottom: 12px;" id="bulkEditTargetDesc"></p>
       <input type="hidden" id="bulkEditOriginalDate">
       <input type="hidden" id="bulkEditOriginalStore">
@@ -888,13 +877,10 @@
       <label>変更後の日付 (空欄ならそのまま)</label>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="date" id="bulkEditDate" style="margin-bottom: 0; flex: 1;">
-        <button onclick="document.getElementById('bulkEditDate').value = window.kakeibotToday()" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
+        <button onclick="document.getElementById('bulkEditDate').value = new Date().toISOString().split('T')[0]" class="outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">TODAY</button>
       </div>
       <label>変更後の店名 (空欄ならそのまま)</label>
       <input type="text" id="bulkEditStore">
-      <label>変更後の商品名（空欄は変更なし）</label><input type="text" id="bulkEditName">
-      <label>変更後の単価（ポイントは値引き額・空欄は変更なし）</label><input type="number" id="bulkEditAmount">
-      <label>変更後のメモ（空欄は変更なし）</label><input type="text" id="bulkEditMemo">
       <label>変更後のカテゴリ (変更なしの場合は「---」)</label>
       <select id="bulkEditCategory" style="margin-bottom: 0;">
         <option value="">---</option>
@@ -904,33 +890,6 @@
         <button onclick="closeBulkEditModal()" class="outline" style="flex: 1; border-color: #999; color: #666;">キャンセル</button>
         <button onclick="executeBulkEdit()" style="flex: 1;">一括更新</button>
       </div>
-    </div>
-  </div>
-
-
-  <div id="scheduleEditModal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <h2 id="scheduleEditTitle">支払予定の編集</h2>
-      <div id="scheduleEditDateWrap"><label>支払日</label><input type="date" id="scheduleEditDate"></div>
-      <div id="scheduleEditDayWrap"><label>毎月の支払日</label><select id="scheduleEditDay"></select><small>その月にない日付は月末に計上します。</small></div>
-      <label>名前</label><input type="text" id="scheduleEditName">
-      <label>金額</label><input type="number" id="scheduleEditAmount" min="1">
-      <label>カテゴリ</label><select id="scheduleEditCategory"></select>
-      <label>メモ</label><input type="text" id="scheduleEditMemo">
-      <button onclick="saveScheduleEdit()">保存</button><button class="outline" onclick="closeScheduleEdit()" style="margin-top:8px">キャンセル</button>
-    </div>
-  </div>
-  <div id="loanEditModal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <h2 id="loanEditTitle">貸し借りを登録</h2>
-      <label>方向</label><select id="loanDirection"><option value="lend">相手に貸した</option><option value="borrow">相手から借りた</option></select>
-      <label>相手（友人・家族など）</label><input type="text" id="loanPerson">
-      <label>元の金額（円）</label><input type="number" id="loanAmount" min="1">
-      <label>返済済みの合計（円）</label><input type="number" id="loanRepaid" min="0">
-      <label>貸し借りした日</label><input type="date" id="loanDate">
-      <label>返済予定日（任意）</label><input type="date" id="loanDueDate">
-      <label>メモ</label><input type="text" id="loanMemo">
-      <button onclick="saveLoan()">保存</button><button class="outline" onclick="closeLoanEdit()" style="margin-top:8px">キャンセル</button>
     </div>
   </div>
 
@@ -970,7 +929,7 @@
   window.currentBookId = 'default';
 
   // カテゴリ設定 (食費(雑)を外食・弁当・嗜好品に分割)
-  const defaultCategories = ["食費(純)", "食費(外食)", "食費(弁当)", "食費(嗜好品)", "経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "雑費", "税", "割引"];
+  const defaultCategories = ["食費(純)", "食費(外食)", "食費(弁当)", "食費(嗜好品)", "経費(日用品)", "経費(交通費)", "経費(公共料金)", "経費(その他)", "雑費", "税"];
   window.userCategories = [...defaultCategories];
   window.aiAutoCategory = true;
 
@@ -996,69 +955,12 @@
   const incomeChartColors = ['#9ec2ae', '#a0b1d1', '#cc9db0', '#b0cc9d', '#a0a6d1'];
   const incomeBarColors = ['#9ec2ae', '#a0b1d1', '#cc9db0'];
 
-
-  // One signed amount is used by every history, chart and export.
-  function numberValue(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
-  function localDate(date = new Date()) {
-    return [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('-');
-  }
-  function validDate(value) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
-    const [y,m,d] = value.split('-').map(Number);
-    const date = new Date(y,m-1,d);
-    return date.getFullYear() === y && date.getMonth() === m-1 && date.getDate() === d;
-  }
-  function internalTax(e) {
-    return e.kind === 'internal_tax' || /内\s*消費税|内税|うち消費税|消費税等.*含|税額.*含/.test(e.sourceLabel || e.name || '');
-  }
-  function discountItem(e) {
-    return e.kind === 'discount' || e.kind === 'point' || e.isDiscount === true || e.isPoint === true ||
-      e.category === '割引' || e.category === 'ポイント利用' ||
-      numberValue(e.price) + numberValue(e.tax) < 0;
-  }
-  function taxItem(e) { return e.kind === 'external_tax' || e.name === '外税(消費税)' || e.category === '税'; }
-  function expenseAmount(e) {
-    if (internalTax(e)) return 0;
-    if (e.isPoint || e.kind === 'point') return -Math.abs(numberValue(e.pointAmount || e.price));
-    const total = numberValue(e.price) + numberValue(e.tax);
-    return discountItem(e) ? -Math.abs(total) : total;
-  }
-  function expenseCategory(e) { return discountItem(e) ? '割引' : e.category; }
-  function productCount(e) { return internalTax(e) || taxItem(e) || discountItem(e) ? 0 : Math.max(1,numberValue(e.qty)); }
-  function reviewable(e) { return productCount(e) > 0 && expenseAmount(e) >= 0; }
-  function normalizeExpense(input) {
-    const e = {...input};
-    if (internalTax(e)) { e.price = 0; e.tax = 0; e.unit_price = 0; e.isNecessary = true; return e; }
-    if (e.isPoint || e.kind === 'point') {
-      e.kind = 'point'; e.isPoint = true; e.pointAmount = Math.abs(numberValue(e.pointAmount || e.price));
-      e.price = -e.pointAmount; e.unit_price = e.price; e.tax = 0; e.qty = 1;
-      e.category = '割引'; e.isDiscount = true; e.isNecessary = null;
-    } else if (discountItem(e)) {
-      e.price = -Math.abs(numberValue(e.price) + numberValue(e.tax)); e.tax = 0;
-      e.unit_price = e.price; e.qty = 1; e.category = '割引'; e.kind = 'discount';
-      e.isDiscount = true; e.isNecessary = null;
-    } else {
-      e.price = numberValue(e.price); e.tax = numberValue(e.tax);
-      e.unit_price = numberValue(e.unit_price); e.qty = Math.max(1,numberValue(e.qty));
-    }
-    return e;
-  }
-  function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function yen(amount) { return (amount < 0 ? '-¥' : '¥') + Math.abs(amount).toLocaleString(); }
-  function savingsSummary(data) {
-    let gross=0, discount=0, points=0;
-    data.forEach(e => { const a=expenseAmount(e); if(a<0) { discount-=a; if(e.isPoint) points-=a; } else gross+=a; });
-    return {gross,discount,points,net:gross-discount};
-  }
-
   // ★ API呼び出し時の503/429エラー対策用 (Exponential Backoff リトライ)
   window.fetchWithRetry = async function(url, options = {}, maxRetries = 3) {
     let delay = 1000;
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const response = await fetch(url, {...options, signal: options.signal || AbortSignal.timeout(90000)});
+        const response = await fetch(url, options);
         // 正常、またはリトライ対象外のエラー（400番台など。ただし429はリトライ）ならすぐ返す
         if (response.ok || (response.status !== 503 && response.status !== 429 && response.status !== 500 && response.status !== 502)) {
           return response;
@@ -1227,13 +1129,13 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
     }, (err) => {
         console.error("users同期エラー:", err);
         if (err.code === 'permission-denied' && !useEnvironmentFirebase) {
-            alert("Firebaseの権限エラーです。Firebase Consoleで認証とデータ所有者に対応したFirestoreルールを確認してください。");
+            alert("Firebaseの権限エラーです。ご自身のFirebase ConsoleからFirestoreの「ルール」をテストモード(allow read, write: if true;)に変更してください。");
         }
     });
 
     unsubExpenses = onSnapshot(getCollectionRef('expenses'), (snapshot) => {
       allExpenses = [];
-      snapshot.forEach(d => { allExpenses.push(normalizeExpense({ ...d.data(), id: d.id })); });
+      snapshot.forEach(d => { allExpenses.push({ ...d.data(), id: d.id }); });
       refreshCurrentUserLocalData();
     }, (err) => console.error("expenses同期エラー:", err));
 
@@ -1277,14 +1179,12 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
   }
 
   async function fsSaveExpense(expense) {
-    expense = normalizeExpense(expense);
     if (isCloudEnabled && firebaseUser) {
       try {
         await setDoc(getDocRef('expenses', expense.id), expense);
       } catch(e) {
         console.error("保存失敗:", e);
-        alert("データの保存に失敗しました。");
-        throw e;
+        alert("データの保存に失敗しました。Firebaseのルールを確認してください。");
       }
     } else {
       const idx = window.expenses.findIndex(e => e.id === expense.id);
@@ -1292,7 +1192,6 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
       // ローカル保存時は一旦全データを保存する処理
       const otherExps = allExpenses.filter(e => e.appUserId === window.currentUser && (e.bookId || 'default') !== window.currentBookId);
       const toSave = [...otherExps, ...window.expenses];
-      allExpenses = [...allExpenses.filter(e=>e.appUserId !== window.currentUser), ...toSave];
       localStorage.setItem(`expenses_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
@@ -1300,12 +1199,11 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
 
   async function fsDeleteExpense(id) {
     if (isCloudEnabled && firebaseUser) {
-      try { await deleteDoc(getDocRef('expenses', id)); } catch(e) { console.error("削除失敗:", e); throw e; }
+      try { await deleteDoc(getDocRef('expenses', id)); } catch(e) { console.error("削除失敗:", e); }
     } else {
       window.expenses = window.expenses.filter(e => e.id !== id);
       const otherExps = allExpenses.filter(e => e.appUserId === window.currentUser && (e.bookId || 'default') !== window.currentBookId);
       const toSave = [...otherExps, ...window.expenses];
-      allExpenses = [...allExpenses.filter(e=>e.appUserId !== window.currentUser), ...toSave];
       localStorage.setItem(`expenses_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
@@ -1315,13 +1213,12 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
     if (isCloudEnabled && firebaseUser) {
       try {
         await setDoc(getDocRef('incomes', income.id), income);
-      } catch(e) { console.error("保存失敗:", e); throw e; }
+      } catch(e) { console.error("保存失敗:", e); }
     } else {
       const idx = window.incomes.findIndex(i => i.id === income.id);
       if (idx > -1) window.incomes[idx] = income; else window.incomes.push(income);
       const otherIncs = allIncomes.filter(i => i.appUserId === window.currentUser && (i.bookId || 'default') !== window.currentBookId);
       const toSave = [...otherIncs, ...window.incomes];
-      allIncomes = [...allIncomes.filter(e=>e.appUserId !== window.currentUser), ...toSave];
       localStorage.setItem(`incomes_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
@@ -1334,7 +1231,6 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
       window.incomes = window.incomes.filter(i => i.id !== id);
       const otherIncs = allIncomes.filter(i => i.appUserId === window.currentUser && (i.bookId || 'default') !== window.currentBookId);
       const toSave = [...otherIncs, ...window.incomes];
-      allIncomes = [...allIncomes.filter(e=>e.appUserId !== window.currentUser), ...toSave];
       localStorage.setItem(`incomes_data_${window.currentUser}`, JSON.stringify(toSave));
       window.updateUI();
     }
@@ -1353,7 +1249,7 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
     if (savedAuthId) document.getElementById('authId').value = savedAuthId;
     if (savedAuthPin) document.getElementById('authPin').value = savedAuthPin;
 
-    const today = localDate();
+    const today = new Date().toISOString().split('T')[0];
     document.getElementById('inputDate').value = today;
     document.getElementById('incomeDate').value = today;
     if(document.getElementById('schedDate')) document.getElementById('schedDate').value = today;
@@ -1538,7 +1434,7 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
       if (window.subscriptions.length === 0) {
         subList.innerHTML = '<p style="color:#888; font-size:12px;">登録されているサブスクはありません</p>';
       } else {
-        const currentYearMonth = localDate().substring(0, 7);
+        const currentYearMonth = new Date().toISOString().substring(0, 7);
         window.subscriptions.sort((a, b) => a.day - b.day);
         subList.innerHTML = window.subscriptions.map(sub => {
           const isDoneThisMonth = sub.lastReflectedMonth === currentYearMonth;
@@ -1957,7 +1853,6 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
 
   window.switchBook = function(bookId) {
     if (window.currentBookId === bookId) return;
-    if(window.selectedExpenseIds)window.selectedExpenseIds.clear();
     window.currentBookId = bookId;
     localStorage.setItem(`currentBookId_${window.currentUser}`, window.currentBookId);
     window.renderBookTabs();
@@ -2185,7 +2080,6 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
   };
 
   window.updateCategorySelects = function() {
-    if (!window.userCategories.includes("割引")) window.userCategories.push("割引");
     const opts = window.userCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
     const inputSelect = document.getElementById('inputCategory');
     const editSelect = document.getElementById('editCategory');
@@ -2281,7 +2175,6 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
   };
 
   window.loginWith = function(id) {
-    if(window.selectedExpenseIds)window.selectedExpenseIds.clear();
     window.currentUser = id;
     localStorage.setItem('current_user', id);
     document.getElementById('authId').value = localStorage.getItem('saved_auth_id') || '';
@@ -2290,7 +2183,6 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
   };
 
   window.logout = function() {
-    if(window.selectedExpenseIds)window.selectedExpenseIds.clear();
     window.currentUser = null;
     localStorage.removeItem('current_user');
     window.expenses = [];
@@ -2377,8 +2269,7 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
       const savedExpenses = localStorage.getItem(`expenses_data_${window.currentUser}`);
       if (savedExpenses) { 
         try { 
-          const allUserExps = JSON.parse(savedExpenses).map(normalizeExpense);
-          allExpenses = allUserExps; 
+          const allUserExps = JSON.parse(savedExpenses); 
           window.expenses = allUserExps.filter(e => (e.bookId || 'default') === window.currentBookId);
         } catch(e) {} 
       } else window.expenses = [];
@@ -2386,8 +2277,7 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
       const savedIncomes = localStorage.getItem(`incomes_data_${window.currentUser}`);
       if (savedIncomes) { 
         try { 
-          const allUserIncs = JSON.parse(savedIncomes);
-          allIncomes = allUserIncs; 
+          const allUserIncs = JSON.parse(savedIncomes); 
           window.incomes = allUserIncs.filter(i => (i.bookId || 'default') === window.currentBookId);
         } catch(e) {} 
       } else window.incomes = [];
@@ -2565,6 +2455,166 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
     window.renderAdminHistory(uid);
   };
 
+  window.renderAdminCharts = function() {
+    const uid = document.getElementById('adminUserSelect').value;
+    const selectedMonth = document.getElementById('adminMonthSelector').value;
+    
+    if (window.adminDoughnutChartInstance) window.adminDoughnutChartInstance.destroy();
+    if (window.adminTenDaysChartInstance) window.adminTenDaysChartInstance.destroy();
+    if (window.adminTrendChartInstance) window.adminTrendChartInstance.destroy();
+    if (window.adminEvalTrendChartInstance) window.adminEvalTrendChartInstance.destroy();
+    
+    if (!uid || !selectedMonth) {
+      document.getElementById('adminChartLegend').innerHTML = '';
+      document.getElementById('adminEvaluationStats').innerHTML = '';
+      return;
+    }
+
+    const expData = allExpenses.filter(e => e.appUserId === uid);
+    const monthData = expData.filter(e => e.date.startsWith(selectedMonth));
+    
+    const totals = {};
+    let monthTotal = 0;
+    let yesTotal = 0;
+    let noTotal = 0;
+    
+    monthData.forEach(e => {
+      if (e.isPoint) return; // 管理者グラフでもポイント利用分は除外
+      const cost = e.price + e.tax;
+      if (totals[e.category] !== undefined) totals[e.category] += cost;
+      else totals[e.category] = cost;
+      monthTotal += cost;
+      
+      if (e.isNecessary === true && e.name !== "外税(消費税)") yesTotal += cost;
+      else if (e.isNecessary === false) noTotal += cost;
+    });
+    
+    const reviewedTotal = yesTotal + noTotal;
+    const yesPct = reviewedTotal === 0 ? 0 : Math.round((yesTotal / reviewedTotal) * 100);
+    const noPct = reviewedTotal === 0 ? 0 : Math.round((noTotal / reviewedTotal) * 100);
+    
+    document.getElementById('adminEvaluationStats').innerHTML = `
+      <div style="flex:1; text-align:center;">
+        <div style="font-size:14px; color:#666; margin-bottom: 4px;">👍 必要 (${yesPct}%)</div>
+        <div style="font-weight:bold; color:var(--green-text); font-size: 18px;">¥${yesTotal.toLocaleString()}</div>
+      </div>
+      <div style="flex:1; text-align:center; border-left:1px solid var(--border-color);">
+        <div style="font-size:14px; color:#666; margin-bottom: 4px;">👎 無駄 (${noPct}%)</div>
+        <div style="font-weight:bold; color:var(--red-text); font-size: 18px;">¥${noTotal.toLocaleString()}</div>
+      </div>
+    `;
+    
+    Object.keys(totals).forEach(k => { if(totals[k] === 0) delete totals[k]; });
+    const dynamicPieColors = Object.keys(totals).map((_, i) => chartColors[i % chartColors.length]);
+    
+    const dCtx = document.getElementById('adminExpenseChart').getContext('2d');
+    window.adminDoughnutChartInstance = new Chart(dCtx, {
+      type: 'doughnut',
+      data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: dynamicPieColors, borderWidth: 0 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, cutout: '70%' }
+    });
+
+    let legendHtml = '';
+    let colorIndex = 0;
+    for (const cat in totals) {
+      const val = totals[cat];
+      const pct = monthTotal === 0 ? 0 : Math.round((val / monthTotal) * 100);
+      const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${dynamicPieColors[colorIndex]};margin-right:8px;"></span>`;
+      legendHtml += `<li><div style="display:flex; align-items:center;">${dot}${cat}</div> <div><span>¥${val.toLocaleString()}</span> <span style="color:#666; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+      colorIndex++;
+    }
+    legendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:var(--primary); font-weight:bold;">¥${monthTotal.toLocaleString()}</span></li>`;
+    document.getElementById('adminChartLegend').innerHTML = legendHtml;
+
+    let blockTotals = [0, 0, 0];
+    monthData.forEach(e => {
+      if (e.isPoint) return;
+      const day = parseInt(e.date.split('-')[2], 10);
+      const amount = e.price + e.tax;
+      if (day <= 10) blockTotals[0] += amount;
+      else if (day <= 20) blockTotals[1] += amount;
+      else blockTotals[2] += amount;
+    });
+    
+    const tdCtx = document.getElementById('adminTenDaysChart').getContext('2d');
+    window.adminTenDaysChartInstance = new Chart(tdCtx, {
+      type: 'bar',
+      data: { labels: ['上旬', '中旬', '下旬'], datasets: [{ data: blockTotals, backgroundColor: barColors, borderRadius: 6 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+
+    let allMonths = [...new Set(expData.map(e => e.date.substring(0, 7)))].sort();
+    let targetMonths = allMonths.slice(-12);
+    if(targetMonths.length === 0) {
+      targetMonths = [new Date().toISOString().substring(0, 7)];
+    }
+    
+    const minWidth = Math.max(100, targetMonths.length * 15) + '%';
+    document.getElementById('adminTrendChartContainer').style.minWidth = minWidth;
+    document.getElementById('adminEvalTrendChartContainer').style.minWidth = minWidth;
+
+    const expenseCategories = [...new Set(expData.map(e => e.category))].filter(c => c !== "ポイント利用");
+    const datasets = expenseCategories.map((cat, i) => {
+      return {
+        label: cat,
+        data: targetMonths.map(m => {
+          return expData.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0);
+        }),
+        backgroundColor: chartColors[i % chartColors.length]
+      };
+    });
+
+    const tCtx = document.getElementById('adminTrendChart').getContext('2d');
+    window.adminTrendChartInstance = new Chart(tCtx, {
+      type: 'bar',
+      data: { labels: targetMonths, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }
+      }
+    });
+
+    const yesData = [];
+    const noData = [];
+    targetMonths.forEach(m => {
+      let y = 0, n = 0;
+      expData.filter(e => e.date.startsWith(m) && !e.isPoint).forEach(e => {
+        const cost = e.price + e.tax;
+        if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
+        else if (e.isNecessary === false) n += cost;
+      });
+      const total = y + n;
+      if(total > 0) {
+        yesData.push(Math.round((y / total) * 100));
+        noData.push(Math.round((n / total) * 100));
+      } else {
+        yesData.push(0);
+        noData.push(0);
+      }
+    });
+
+    const etCtx = document.getElementById('adminEvalTrendChart').getContext('2d');
+    window.adminEvalTrendChartInstance = new Chart(etCtx, {
+      type: 'bar',
+      data: {
+        labels: targetMonths,
+        datasets: [
+          { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 },
+          { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true, min: 0, max: 100, ticks: { callback: function(value) { return value + "%" } } } },
+        plugins: {
+          tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + '%'; } } },
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } }
+        }
+      }
+    });
+  };
+
   window.renderAdminHistory = function(uid) {
     const expData = allExpenses.filter(e => e.appUserId === uid);
     const incData = allIncomes.filter(i => i.appUserId === uid);
@@ -2576,15 +2626,15 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
     } else {
       expData.sort((a, b) => b.date.localeCompare(a.date));
       expData.forEach(e => {
-        const total = expenseAmount(e);
+        const total = e.price + e.tax;
         let amountHtml = `¥${total.toLocaleString()}`;
-        if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">${yen(expenseAmount(e))}（ポイント値引き）</span>`;
+        if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">-${e.pointAmount.toLocaleString()} pt</span>`;
         html += `
           <div class="history-item" style="cursor:default; margin-left:0;">
             <div>
               <div style="font-weight:bold; font-size:14px; color:var(--text-color);">${maskText(e.name)}</div>
               <div style="font-size:12px; color:#666; margin-top:2px;">${e.date} • ${maskText(e.store)}</div>
-              <div style="font-size:12px; color:#666;">カテゴリ: ${expenseCategory(e)}</div>
+              <div style="font-size:12px; color:#666;">カテゴリ: ${e.category}</div>
             </div>
             <div style="font-weight:bold;">${amountHtml}</div>
           </div>`;
@@ -2719,54 +2769,80 @@ Data: ${JSON.stringify(legacyExpenses.map(e => ({id: e.id, name: e.name, store: 
 
   // --- AI 画像解析 (OCR) ---
   async function compressImage(file) {
-    const data = await new Promise((resolve,reject) => {
-      const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=()=>reject(new Error("画像を読み込めません。")); reader.readAsDataURL(file);
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = event => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const max_size = 600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > max_size) {
+            height *= max_size / width;
+            width = max_size;
+          } else if (height > max_size) {
+            width *= max_size / height;
+            height = max_size;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+        };
+      };
     });
-    const img = await new Promise((resolve,reject) => {
-      const image=new Image(); image.onload=()=>resolve(image); image.onerror=()=>reject(new Error("未対応の画像形式です。")); image.src=data;
-    });
-    const scale=Math.min(1,1600/Math.max(img.width,img.height));
-    const canvas=document.createElement('canvas'); canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
-    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-    return canvas.toDataURL('image/jpeg',0.85);
   }
 
   window.handleImageUpload = async function(e) {
-    const file = e.target?.files?.[0] || e.target;
+    const file = e.target?.files[0] || e.target;
     if (!file || !file.name) return;
 
     const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
     if (!apiKey) { if(e.target.value) e.target.value = ''; return alert("APIキーを設定してください。"); }
     
     const loadingMsg = document.getElementById('loadingMsg');
-    if (window.ocrBusy) return;
-    window.ocrBusy = true;
-    window.ocrScanDate = localDate();
-    const scanUser = window.currentUser, scanBook = window.currentBookId;
-    window.setOcrProgress(5, '画像を準備中');
     loadingMsg.innerText = 'AIが解析中...';
     loadingMsg.classList.remove('hidden');
 
     try {
       const compressedDataUrl = await compressImage(file);
       const base64String = compressedDataUrl.split(',')[1];
-      window.setOcrProgress(25, 'AIへ送信・解析中');
 
-      const allowedCategories = [...new Set([...window.userCategories, '税', '割引'])];
-      const catInstructions = window.aiAutoCategory ? 'Classify products using the supplied Japanese categories.' : 'Use the first supplied category for products.';
+      const allowedCategories = window.userCategories.includes("税") 
+        ? window.userCategories 
+        : [...window.userCategories, "税"];
+
+      let catInstructions = window.aiAutoCategory
+        ? `Classify into [${allowedCategories.join(', ')}] using MECE rules:
+- "食費(純)": Raw cooking ingredients, fresh fruits, staples (meat, veg, rice, seasonings)
+- "食費(外食)": Restaurant dining, cafe, fast food, takeout
+- "食費(弁当)": Store-bought bento, ready-made deli/side dishes, sandwiches
+- "食費(嗜好品)": Snacks, sweets, desserts, all beverages, alcohol
+- "経費(日用品)": Daily consumables, toiletries, cleaning/drugstore items
+- "経費(交通費)": Train, bus, taxi, IC charge, fuel, tolls, parking
+- "経費(公共料金)": Utilities (electricity, gas, water, telecom, internet)
+- "経費(その他)": Other necessary expenses, medical, stationery, fees
+- "雑費": Socializing, leisure, entertainment, bathhouse (sento), others
+- "税": Standalone external tax only`
+        : `Set all item categories to "${window.userCategories[0] || '未分類'}" (except standalone tax -> "税").`;
+
       const payload = {
         contents: [{
           parts: [
-            { text: `Extract receipt JSON. Japanese names/store/categories. Scan date: ${window.ocrScanDate}.
-Keep the printed year (convert Japanese era); use scan date only when missing.
-Return error if unreadable. Each row: kind=product|discount|point|external_tax|internal_tax, sourceLabel=printed label.
-Products: gross price BEFORE separately listed discounts; price=unit_price*qty. Never deduct twice.
-\"内消費税\",\"内税\",\"うち消費税\": already included. OMIT these informational rows; never add them to tax.
-Only explicitly ADDED tax: external_tax row, name=\"外税(消費税)\", category=\"税\", tax=0.
-Coupons/markdowns/rebates: discount row, negative price, qty=1,tax=0,category=\"割引\".
-Redeemed points: point row, negative YEN value, pointAmount=yen value,pointType=program. Ignore earned/balance points, tender/change. Never infer a conversion.
-Deduplicate repeated discounts/tax/payment summaries. Gross products + external tax - discounts - points must match paid total when shown.
-Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructions}` },
+            { text: `Extract receipt data into JSON. All text outputs (store, name, category) MUST be in Japanese.
+Rules:
+1. If unreadable/not a receipt, return {"error":"認識不可"}.
+2. Split unit_price, qty, and price (unit_price * qty).
+3. Include internal tax in price. Extract external tax as a separate item: name="外税(消費税)", category="税".
+4. Infer and complete truncated Japanese product names using your knowledge before classifying.
+5. Remove branch names from store (e.g. "セブンイレブン").
+6. Category: ${catInstructions}`
+            },
             {
               inline_data: { mime_type: "image/jpeg", data: base64String }
             }
@@ -2783,10 +2859,6 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
                 items: {
                   type: "OBJECT",
                   properties: {
-                    kind: {type:"STRING", enum:["product","discount","point","external_tax","internal_tax"]},
-                    sourceLabel: {type:"STRING"},
-                    pointAmount: {type:"INTEGER"},
-                    pointType: {type:"STRING"},
                     date: { type: "STRING" },
                     store: { type: "STRING" },
                     name: { type: "STRING" },
@@ -2797,7 +2869,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
                     category: { type: "STRING", enum: allowedCategories },
                     memo: { type: "STRING" }
                   },
-                  required: ["kind", "sourceLabel", "date", "store", "name", "unit_price", "qty", "price", "tax", "category"]
+                  required: ["date", "store", "name", "unit_price", "qty", "price", "tax", "category"]
                 }
               },
               error: { type: "STRING" }
@@ -2822,7 +2894,6 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
         throw new Error(`通信エラー (${response.status})。サーバーが混雑しています。再度お試しください。`);
       }
       
-      window.setOcrProgress(85, '読み取り結果を確認中');
       const result = await response.json();
       if (!result.candidates || result.candidates.length === 0) throw new Error("解析結果が空でした。");
 
@@ -2843,11 +2914,10 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
       if (parsedData.items && parsedData.items.length > 0) {
         window.tempParsedItems = [];
         for (const item of parsedData.items) {
-          if (internalTax(item)) continue;
-          const isTax = item.kind === "external_tax" || item.name === "外税(消費税)";
+          const isTax = item.name === "外税(消費税)";
           let itemCategory = item.category;
           
-          if (!allowedCategories.includes(itemCategory)) {
+          if (!window.userCategories.includes(itemCategory)) {
             itemCategory = window.userCategories[0] || '未分類';
           }
 
@@ -2855,12 +2925,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
             id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
             appUserId: window.currentUser,
             bookId: window.currentBookId,
-            kind: item.kind,
-            sourceLabel: item.sourceLabel,
-            pointAmount: item.kind === "point" ? Math.abs(numberValue(item.pointAmount || item.price)) : 0,
-            pointType: item.pointType || "",
-            isPoint: item.kind === "point",
-            date: validDate(item.date) ? item.date : window.ocrScanDate,
+            date: item.date || new Date().toISOString().split('T')[0],
             store: item.store || "不明",
             name: item.name || "不明な商品",
             unit_price: parseInt(item.unit_price) || 0,
@@ -2871,11 +2936,8 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
             memo: item.memo || "",
             isNecessary: isTax ? true : null
           };
-          window.tempParsedItems.push(normalizeExpense(expense));
+          window.tempParsedItems.push(expense);
         }
-        if (scanUser !== window.currentUser || scanBook !== window.currentBookId) throw new Error('解析中にアカウントまたはブックが変更されました。再度読み取ってください。');
-        if (!window.tempParsedItems.length) throw new Error('保存できる明細がありません。');
-        window.setOcrProgress(100, '解析完了');
         loadingMsg.classList.add('hidden');
         if(e.target.value !== undefined) e.target.value = '';
         window.showOcrConfirmModal();
@@ -2885,9 +2947,8 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     } catch (error) { 
       loadingMsg.classList.add('hidden'); 
       if(e.target.value !== undefined) e.target.value = '';
-      alert(`解析エラー: ${error.message}`);
-      window.setOcrProgress(0, "解析を完了できませんでした");
-    } finally { window.ocrBusy = false; }
+      alert(`解析エラー: ${error.message}`); 
+    }
   };
 
   window.saveParsedItems = async function(items) {
@@ -2895,8 +2956,8 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     for (const item of items) {
       await fsSaveExpense(item);
       // 税金およびポイント利用は品数（件数）にカウントしない
-      if (productCount(item) > 0) {
-        addedCount += productCount(item);
+      if (item.name !== "外税(消費税)" && item.category !== "税" && !item.isPoint) {
+        addedCount++;
       }
     }
     alert(`記録を保存し、${addedCount}点の商品を現在のブックに追加しました！（※税金は品数に含みません）`);
@@ -2908,7 +2969,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     if (window.tempParsedItems.length === 0) return;
 
     const firstItem = window.tempParsedItems[0];
-    document.getElementById('ocrBatchDate').value = firstItem.date || localDate();
+    document.getElementById('ocrBatchDate').value = firstItem.date || new Date().toISOString().split('T')[0];
     document.getElementById('ocrBatchStore').value = firstItem.store || "";
     
     // ポイント選択初期化
@@ -2917,7 +2978,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
 
     let html = '';
     window.tempParsedItems.forEach((item, index) => {
-      const isTax = taxItem(item) || item.isPoint;
+      const isTax = item.name === "外税(消費税)";
       
       let itemCatOptions = window.userCategories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
       if (!window.userCategories.includes(item.category)) {
@@ -2931,7 +2992,6 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
             ${item.qty > 1 ? `<span style="font-size:12px; color:#888;">@¥${item.unit_price} × ${item.qty}</span>` : ''}
           </div>
           <input type="text" id="ocrItemName_${index}" value="${item.name.replace(/"/g, '&quot;')}" style="margin-bottom: 4px; padding: 6px; font-size: 13px;" ${isTax ? 'readonly style="background:#f0ebeb; color:#888;"' : ''}>
-          <label>金額（値引きは負の値・ポイントは円）</label><input type="number" id="ocrItemAmount_${index}" value="${expenseAmount(item)}" style="padding:6px;margin-bottom:4px;">
           <select id="ocrItemCat_${index}" style="margin-bottom: 0; padding: 6px; font-size: 13px;" ${isTax ? 'disabled' : ''}>
             ${itemCatOptions}
           </select>
@@ -2939,11 +2999,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
       `;
     });
     listDiv.innerHTML = html;
-    document.getElementById('ocrPointType').value = '';
-    const autoPoints=window.tempParsedItems.filter(e=>e.isPoint).reduce((n,e)=>n+e.pointAmount,0);
-    document.getElementById('ocrPointAmount').placeholder = autoPoints ? "追加のポイント値引き（円）" : "ポイント値引き額（円）";
-    document.getElementById('ocrBatchDate').onchange = window.updateOcrYearWarning;
-    window.updateOcrYearWarning();
+    
     document.getElementById('ocrConfirmModal').classList.remove('hidden');
   };
 
@@ -2951,19 +3007,10 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     const batchDate = document.getElementById('ocrBatchDate').value;
     const batchStore = document.getElementById('ocrBatchStore').value.trim();
 
-    if (!validDate(batchDate)) return alert("有効な日付を入力してください。");
-    if (window.ocrSaving) return;
-    if (batchDate.slice(0,4) !== (window.ocrScanDate || localDate()).slice(0,4) &&
-        !confirm("読み取り日付の年がスキャン時の年と異なります。\n" + batchDate + " で保存しますか？")) return;
     window.tempParsedItems.forEach((item, index) => {
       if (batchDate) item.date = batchDate;
       if (batchStore) item.store = batchStore;
 
-      const amountInput = document.getElementById('ocrItemAmount_'+index);
-      if(amountInput && Number.isFinite(Number(amountInput.value))) {
-        item.price=Number(amountInput.value);item.tax=0;item.unit_price=item.price/item.qty;
-        if(item.isPoint)item.pointAmount=Math.abs(item.price);
-      }
       const nameInput = document.getElementById(`ocrItemName_${index}`);
       const catSelect = document.getElementById(`ocrItemCat_${index}`);
       if (nameInput && !nameInput.readOnly) {
@@ -2978,16 +3025,11 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     const ptAmount = parseInt(document.getElementById('ocrPointAmount').value) || 0;
     
     if (ptType && ptType !== 'NEW' && ptAmount > 0) {
-      if (window.tempParsedItems.some(e=>e.isPoint && !e.manualPoint) &&
-          !confirm("読み取ったポイント値引きが既にあります。さらに手入力分を追加しますか？")) return;
-      const oldManual=window.tempParsedItems.find(e=>e.manualPoint);
-      window.tempParsedItems=window.tempParsedItems.filter(e=>!e.manualPoint);
       const ptExpense = {
-        manualPoint: true,
-        id: oldManual?.id || (Date.now().toString() + Math.random().toString(36).substring(2, 9)),
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
         appUserId: window.currentUser,
         bookId: window.currentBookId,
-        date: batchDate || localDate(),
+        date: batchDate || new Date().toISOString().split('T')[0],
         store: batchStore || "不明",
         name: `${ptType}利用`,
         unit_price: 0,
@@ -3004,12 +3046,8 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
       window.tempParsedItems.push(ptExpense);
     }
 
-    window.ocrSaving = true;
-    try {
-      await window.saveParsedItems(window.tempParsedItems.map(normalizeExpense));
-      document.getElementById('ocrConfirmModal').classList.add('hidden');
-    } catch(error) { alert("保存に失敗しました。同じ明細IDで再試行できます。"); }
-    finally { window.ocrSaving=false; }
+    document.getElementById('ocrConfirmModal').classList.add('hidden');
+    await window.saveParsedItems(window.tempParsedItems);
   };
 
   window.discardOcrConfirm = function() {
@@ -3028,7 +3066,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
       appUserId: window.currentUser,
       bookId: window.currentBookId,
-      date: document.getElementById('inputDate').value || localDate(),
+      date: document.getElementById('inputDate').value || new Date().toISOString().split('T')[0],
       store: document.getElementById('inputStore').value.trim() || "不明",
       name: name,
       unit_price: unitPrice,
@@ -3051,13 +3089,13 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
 
   // ★ 変更点：ポイント類を整理(スワイプ)対象からさらに厳密に除外
   window.updateUI = function() {
-    const unreviewed = window.expenses.filter(e => e.isNecessary == null && reviewable(e));
+    const unreviewed = window.expenses.filter(e => e.isNecessary === null && !e.isPoint && e.category !== "ポイント利用");
     document.getElementById('badgeUnreviewed').innerText = unreviewed.length > 0 ? `(${unreviewed.length})` : '';
 
     const swipeArea = document.getElementById('swipeArea');
     if (unreviewed.length > 0) {
       const target = unreviewed[0];
-      const total = expenseAmount(target);
+      const total = target.price + target.tax;
       const qtyText = target.qty > 1 ? `<span style="font-size:16px; color:#888; font-weight:normal;">(@¥${target.unit_price} × ${target.qty})</span>` : '';
       const memoDisplay = target.memo ? `<div class="memo-badge"><span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">edit_document</span> ${target.memo}</div>` : '';
       
@@ -3098,7 +3136,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
   // ★ 変更点：ポイント類を整理履歴(スワイプ記録)からさらに厳密に除外
   window.updateSwipeHistory = function() {
     const historyList = document.getElementById('swipeHistoryList');
-    const reviewed = window.expenses.filter(e => typeof e.isNecessary === "boolean" && reviewable(e));
+    const reviewed = window.expenses.filter(e => e.isNecessary !== null && e.name !== "外税(消費税)" && !e.isPoint && e.category !== "ポイント利用");
     if (reviewed.length === 0) { historyList.innerHTML = '<p style="color:#888;">スワイプ記録がありません</p>'; return; }
 
     const byDate = {};
@@ -3124,7 +3162,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
               <div style="margin-left:12px;"><div style="font-weight:bold; font-size:14px;">${e.name} ${qtyText}</div></div>
             </div>
             <div style="display:flex; align-items:center;">
-              <span style="font-weight:bold; margin-right:16px;">¥${expenseAmount(e)}</span>
+              <span style="font-weight:bold; margin-right:16px;">¥${e.price + e.tax}</span>
               <button class="outline" style="padding:4px 8px; font-size:12px;" onclick="undoSwipe('${e.id}')">戻す</button>
             </div>
           </div>`;
@@ -3204,98 +3242,100 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     window.closeBulkEditModal();
   };
 
-
-  window.selectedExpenseIds = new Set();
   window.updateHistoryTree = function() {
-    const host=document.getElementById('historyList');
-    const query=(document.getElementById('historySearchInput').value||'').trim().toLowerCase();
-    const currentIds=new Set(window.expenses.map(e=>e.id));
-    window.selectedExpenseIds.forEach(id=>{if(!currentIds.has(id))window.selectedExpenseIds.delete(id);});
-    const rows=window.expenses.filter(e=>!internalTax(e)&&[e.name,e.store,expenseCategory(e),e.memo].some(v=>String(v||'').toLowerCase().includes(query)));
-    host.replaceChildren();
-    const toolbar=document.createElement('div');toolbar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';
-    const count=document.createElement('span');count.id='selectionCount';toolbar.append(count);
-    [['選択した記録を編集',()=>window.openSelectedEdit()],['選択した記録を削除',()=>window.deleteSelectedExpenses()],['選択解除',()=>{window.selectedExpenseIds.clear();window.updateHistoryTree();}]].forEach(([text,fn])=>{
-      const btn=document.createElement('button');btn.className='outline';btn.textContent=text;btn.onclick=fn;toolbar.append(btn);
+    const historyList = document.getElementById('historyList');
+    const searchInput = document.getElementById('historySearchInput');
+    const searchWord = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+    let targetExpenses = window.expenses;
+    if (searchWord) {
+      targetExpenses = window.expenses.filter(e => 
+        e.name.toLowerCase().includes(searchWord) ||
+        e.store.toLowerCase().includes(searchWord) ||
+        e.category.toLowerCase().includes(searchWord) ||
+        (e.memo && e.memo.toLowerCase().includes(searchWord))
+      );
+    }
+
+    if (targetExpenses.length === 0) { historyList.innerHTML = '<p style="color:#888;">出費履歴がありません</p>'; return; }
+
+    const byDate = {};
+    targetExpenses.forEach(e => {
+      if (!byDate[e.date]) byDate[e.date] = {};
+      if (!byDate[e.date][e.store]) byDate[e.date][e.store] = [];
+      byDate[e.date][e.store].push(e);
     });
-    host.append(toolbar);
-    const dates=[...new Set(rows.map(e=>e.date))].sort().reverse();
-    if(!dates.length) {const p=document.createElement('p');p.textContent='出費履歴がありません';host.append(p);}
-    dates.forEach(date=>{
-      const dayRows=rows.filter(e=>e.date===date);const day=document.createElement('details');day.open=true;
-      const summary=document.createElement('summary');summary.textContent=date+' ('+dayRows.reduce((n,e)=>n+productCount(e),0)+'点) '+yen(dayRows.reduce((n,e)=>n+expenseAmount(e),0));day.append(summary);
-      [...new Set(dayRows.map(e=>e.store))].forEach(store=>{
-        const items=dayRows.filter(e=>e.store===store);const group=document.createElement('details');group.open=true;
-        const title=document.createElement('summary');title.className='tree-store-summary';title.style.flexWrap='wrap';
-        const text=document.createElement('span');text.textContent=store+' ('+items.reduce((n,e)=>n+productCount(e),0)+'点) '+yen(items.reduce((n,e)=>n+expenseAmount(e),0));title.append(text);
-        const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
-        const addButton=(label,fn)=>{const btn=document.createElement('button');btn.textContent=label;btn.className='outline';btn.style.cssText='padding:5px 8px;font-size:11px';btn.onclick=event=>{event.preventDefault();event.stopPropagation();fn()};buttons.append(btn)};
-        addButton('全選択',()=>{items.forEach(e=>window.selectedExpenseIds.add(e.id));window.updateHistoryTree()});
-        addButton('一括編集',()=>window.openExpenseBatch(items.map(e=>e.id),date+' / '+store));
-        addButton('全削除',()=>window.removeExpenseBatch(items.map(e=>e.id)));
-        title.append(buttons);group.append(title);
-        items.sort((a,b)=>b.id.localeCompare(a.id)).forEach(e=>{
-          const row=document.createElement('div');row.className='history-item';row.style.marginLeft='8px';
-          const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=window.selectedExpenseIds.has(e.id);checkbox.setAttribute('aria-label',e.name+'を選択');checkbox.style.marginRight='12px';
-          checkbox.onchange=()=>{if(checkbox.checked)window.selectedExpenseIds.add(e.id);else window.selectedExpenseIds.delete(e.id);window.updateSelectionCount()};row.append(checkbox);
-          const info=document.createElement('div');info.style.flex='1';
-          info.innerHTML='<b>'+escapeHtml(e.name)+'</b><div style="font-size:12px;color:#888">'+escapeHtml(expenseCategory(e))+(e.isPoint?' / '+escapeHtml(e.pointType)+'（値引き額）':'')+'</div>'+(e.memo?'<small>'+escapeHtml(e.memo)+'</small>':'');
-          info.onclick=()=>window.openEditModal(e.id);row.append(info);
-          const amount=document.createElement('b');amount.textContent=yen(expenseAmount(e));amount.style.color=discountItem(e)?'var(--green-text)':'';amount.onclick=()=>window.openEditModal(e.id);row.append(amount);group.append(row);
-        });day.append(group);
-      });host.append(day);
-    });window.updateSelectionCount();
-  };
-  window.updateSelectionCount = function() {
-    const el=document.getElementById('selectionCount');if(el)el.textContent=window.selectedExpenseIds.size+'件選択中';
-  };
-  window.openSelectedEdit = function() {
-    if(!window.selectedExpenseIds.size)return alert('編集する記録を選択してください。');
-    window.openExpenseBatch([...window.selectedExpenseIds],'選択した記録');
-  };
-  window.openExpenseBatch = function(ids,desc) {
-    window.bulkExpenseIds=[...ids]; window.bulkUser=window.currentUser;window.bulkBook=window.currentBookId;
-    document.getElementById('bulkEditTargetDesc').textContent=desc+' / '+ids.length+'件';
-    ['bulkEditDate','bulkEditStore','bulkEditName','bulkEditMemo','bulkEditAmount'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('bulkEditCategory').innerHTML='<option value="">変更なし</option>'+window.userCategories.map(c=>'<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>').join('');
-    document.getElementById('bulkEditModal').classList.remove('hidden');
-  };
-  window.openBulkEditModal = function(date,store) {
-    window.cancelLongPress();window.openExpenseBatch(window.expenses.filter(e=>e.date===date&&e.store===store).map(e=>e.id),date+' / '+store);
-  };
-  window.executeBulkEdit = async function() {
-    if(window.bulkBusy)return;
-    if(window.bulkUser!==window.currentUser||window.bulkBook!==window.currentBookId)return alert('対象ブックが変わりました。選び直してください。');
-    const date=document.getElementById('bulkEditDate').value,store=document.getElementById('bulkEditStore').value.trim(),name=document.getElementById('bulkEditName').value.trim(),memo=document.getElementById('bulkEditMemo').value,cat=document.getElementById('bulkEditCategory').value;
-    const rawAmount=document.getElementById('bulkEditAmount').value;
-    if(date&&!validDate(date))return alert('有効な日付を入力してください。');
-    if(rawAmount!==''&&!Number.isFinite(Number(rawAmount)))return alert('金額を確認してください。');
-    const targets=window.expenses.filter(e=>(window.bulkExpenseIds||[]).includes(e.id));
-    if(!targets.length)return alert('編集対象がありません。');
-    window.bulkBusy=true;
-    try {
-      for(const original of targets) {
-        const e={...original};if(date)e.date=date;if(store)e.store=store;if(name)e.name=name;if(memo!=='')e.memo=memo;
-        if(cat&&!discountItem(e))e.category=cat;
-        if(rawAmount!=='') {
-          if(e.isPoint){e.pointAmount=Math.abs(Number(rawAmount));e.price=-e.pointAmount;e.unit_price=e.price;e.tax=0;}
-          else {e.unit_price=Number(rawAmount);e.price=e.unit_price*e.qty;}
+
+    let html = '';
+    for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
+      let dateTotal = 0;
+      let dateItemCount = 0;
+      Object.values(byDate[date]).forEach(storeArr => storeArr.forEach(e => {
+        if(!e.isPoint) {
+          dateTotal += (e.price + e.tax);
+          // 税金項目は品数に含めない
+          if (e.name !== "外税(消費税)" && e.category !== "税") {
+            dateItemCount += (e.qty || 1);
+          }
         }
-        await fsSaveExpense(e);
+      }));
+      html += `<details open><summary>${date} <span style="color:#888; font-size:13px;">(${dateItemCount}点) ¥${dateTotal.toLocaleString()}</span></summary><div>`;
+      
+      for (const store in byDate[date]) {
+        let storeTotal = 0;
+        let storeItemCount = 0;
+        byDate[date][store].forEach(e => {
+          if(!e.isPoint) {
+            storeTotal += (e.price + e.tax);
+            if (e.name !== "外税(消費税)" && e.category !== "税") {
+              storeItemCount += (e.qty || 1);
+            }
+          }
+        });
+        const safeStore = store.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        
+        html += `<details open><summary class="tree-store-summary">
+          <span style="cursor:pointer; user-select: none; -webkit-user-select: none;" 
+                onpointerdown="startLongPress('${date}', '${safeStore}', event)" 
+                onpointerup="cancelLongPress()" 
+                onpointerleave="cancelLongPress()" 
+                oncontextmenu="event.preventDefault(); openBulkEditModal('${date}', '${safeStore}'); return false;"
+                title="長押し・右クリックで一括変更">
+            <span style="color:#e0e0e0;">▪</span> ${store} <span style="color:#888; margin-left:4px; font-weight:normal; font-size:12px;">(${storeItemCount}点)</span> <span style="color:#888; margin-left:4px;">¥${storeTotal.toLocaleString()}</span>
+          </span>
+          <button class="outline" style="padding:4px 8px; font-size:10px; border-color:var(--pale-red-border); color:var(--red-text);" onclick="deleteStoreExpenses('${date}', '${safeStore}', event)">削除</button>
+        </summary><div>`;
+        
+        byDate[date][store].sort((a, b) => b.id.localeCompare(a.id));
+
+        byDate[date][store].forEach(e => {
+          let evalIcon = '<span style="color:#ccc; font-size:12px; margin-right:4px;">ー</span>';
+          if (e.isNecessary === true && e.name !== "外税(消費税)") evalIcon = '<span class="material-symbols-outlined" style="background:var(--pale-green); border:1px solid var(--pale-green-border); border-radius:4px; padding:2px 4px; font-size:12px; color:var(--green-text); vertical-align: text-bottom; margin-right:4px;">thumb_up</span>';
+          if (e.isNecessary === false) evalIcon = '<span class="material-symbols-outlined" style="background:var(--pale-red); border:1px solid var(--pale-red-border); border-radius:4px; padding:2px 4px; font-size:12px; color:var(--red-text); vertical-align: text-bottom; margin-right:4px;">thumb_down</span>';
+          if (e.isPoint) evalIcon = '<span class="material-symbols-outlined" style="background:#eeeeee; border:1px solid #e0e0e0; border-radius:4px; padding:2px 4px; font-size:12px; color:#666; vertical-align: text-bottom; margin-right:4px;">toll</span>';
+          
+          const qtyText = e.qty > 1 ? `<span style="font-size:11px; color:#888;">(@¥${e.unit_price}×${e.qty})</span>` : '';
+          const memoText = e.memo ? `<div class="memo-badge"><span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">edit_document</span> ${e.memo}</div>` : '';
+
+          let amountHtml = `¥${(e.price + e.tax).toLocaleString()}`;
+          if (e.isPoint) amountHtml = `<span style="color: var(--green-text);">-${e.pointAmount.toLocaleString()} pt</span>`;
+
+          html += `
+            <div class="history-item" onclick="openEditModal('${e.id}')">
+              <div>
+                <div style="font-weight:bold; font-size:14px; color:var(--text-color);">${evalIcon} ${e.name} ${qtyText}</div>
+                <div style="font-size:12px; color:#888; margin-top:2px;">${e.category}</div>
+                ${memoText}
+              </div>
+              <div style="font-weight:bold;">${amountHtml}</div>
+            </div>`;
+        });
+        html += `</div></details>`;
       }
-      window.closeBulkEditModal();window.selectedExpenseIds.clear();window.updateHistoryTree();
-    } catch(error) { alert('一部の更新に失敗しました。対象を確認して再試行してください。'); }
-    finally {window.bulkBusy=false;}
+      html += `</div></details>`;
+    }
+    historyList.innerHTML = html;
   };
-  window.removeExpenseBatch = async function(ids) {
-    if(window.bulkBusy||!ids.length)return;
-    if(!confirm(ids.length+'件の記録を削除しますか？'))return;
-    window.bulkBusy=true;
-    try {for(const id of ids){await fsDeleteExpense(id);window.selectedExpenseIds.delete(id);}window.updateHistoryTree();}
-    catch(error){alert('一部の削除に失敗しました。履歴を確認してください。');}
-    finally {window.bulkBusy=false;}
-  };
-  window.deleteSelectedExpenses = function() { return window.removeExpenseBatch([...window.selectedExpenseIds]); };
 
   window.openEditModal = function(id) {
     const e = window.expenses.find(x => x.id === id);
@@ -3322,8 +3362,7 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
 
   window.updateExpense = async function() {
     const id = document.getElementById('editId').value;
-    const found = window.expenses.find(x=>x.id===id);
-    const e = found ? {...found} : null;
+    const e = window.expenses.find(x => x.id === id);
     if(e) {
       const uPrice = parseInt(document.getElementById('editUnitPrice').value) || 0;
       const q = parseInt(document.getElementById('editQty').value) || 1;
@@ -3331,9 +3370,8 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
       e.store = document.getElementById('editStore').value;
       e.name = document.getElementById('editName').value;
       e.unit_price = uPrice;
-      e.qty = e.isPoint ? 1 : q;
-      if(e.isPoint) e.pointAmount = Math.abs(uPrice);
-      e.price = e.isPoint ? -Math.abs(uPrice) : uPrice * q;
+      e.qty = q;
+      e.price = uPrice * q;
       e.tax = parseInt(document.getElementById('editTax').value) || 0;
       e.category = document.getElementById('editCategory').value;
       e.memo = document.getElementById('editMemo').value;
@@ -3354,9 +3392,9 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     const selectedMonth = document.getElementById('monthSelector').value;
     let html = '';
     if (window.currentAnalysisMode === 'expense') {
-      let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && expenseCategory(e) === categoryName);
+      let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.category === categoryName && !e.isPoint);
       filtered.forEach(item => {
-        const total = expenseAmount(item);
+        const total = item.price + item.tax;
         html += `
           <div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')">
             <div>
@@ -3387,10 +3425,10 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
   window.showWasteDetails = function() {
     const selectedMonth = document.getElementById('monthSelector').value;
     let html = '';
-    let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.isNecessary === false && reviewable(e));
+    let filtered = window.expenses.filter(e => e.date.startsWith(selectedMonth) && e.isNecessary === false && !e.isPoint);
     
     filtered.forEach(item => {
-      const total = expenseAmount(item);
+      const total = item.price + item.tax;
       html += `
         <div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')">
           <div>
@@ -3414,16 +3452,15 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     if (!start || !end) return alert("開始日と終了日を選択してください。");
     if (start > end) return alert("開始日は終了日前の日付にしてください。");
 
-    const expFiltered = window.expenses.filter(e => e.date >= start && e.date <= end && !internalTax(e));
+    const expFiltered = window.expenses.filter(e => e.date >= start && e.date <= end && !e.isPoint);
     const incFiltered = window.incomes.filter(i => i.date >= start && i.date <= end);
 
     let expTotal = 0;
     const expByCat = {};
     expFiltered.forEach(e => {
-      const cost = expenseAmount(e);
+      const cost = e.price + e.tax;
       expTotal += cost;
-      const cat=expenseCategory(e);
-      expByCat[cat] = (expByCat[cat] || 0) + cost;
+      expByCat[e.category] = (expByCat[e.category] || 0) + cost;
     });
 
     let incTotal = 0;
@@ -3478,17 +3515,16 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     }
     document.getElementById('customPeriodIncomeList').innerHTML = incHtml;
 
-    document.getElementById('customSavings').innerHTML=accountingSummaryHtml(expFiltered);
     document.getElementById('customPeriodResult').classList.remove('hidden');
   };
 
   window.showCustomPeriodDetails = function(type, categoryOrSource, start, end) {
     let html = '';
     if (type === 'expense') {
-      let filtered = window.expenses.filter(e => e.date >= start && e.date <= end && expenseCategory(e) === categoryOrSource);
+      let filtered = window.expenses.filter(e => e.date >= start && e.date <= end && e.category === categoryOrSource && !e.isPoint);
       filtered.sort((a, b) => b.date.localeCompare(a.date));
       filtered.forEach(item => {
-        const total = expenseAmount(item);
+        const total = item.price + item.tax;
         html += `
           <div class="history-item" onclick="closeCategoryModal(); openEditModal('${item.id}')">
             <div>
@@ -3528,115 +3564,271 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
     else selector.innerHTML = `<option value="">データなし</option>`;
   };
 
-
-  function destroyChart(key) { if(window[key]) { window[key].destroy(); window[key]=null; } }
-  function drawChart(key,id,type,labels,datasets,options={}) {
-    destroyChart(key);
-    window[key] = new Chart(document.getElementById(id).getContext('2d'), {
-      type, data:{labels,datasets}, options:{responsive:true,plugins:{legend:{display:false}},...options}
-    });
-  }
-  function accountingSummaryHtml(data) {
-    const t=savingsSummary(data);
-    return '<div style="display:flex;gap:12px;flex-wrap:wrap;padding:12px;background:#f9f9f9;border-radius:8px;margin-bottom:12px;">' +
-      '<span>割引前 <b>'+yen(t.gross)+'</b></span><span style="color:var(--green-text)">節約 <b>'+yen(t.discount)+'</b>（ポイント '+yen(t.points)+'）</span><span>実支払額 <b>'+yen(t.net)+'</b></span></div>';
-  }
-  function twelveMonths(anchor) {
-    const [year,month]=anchor.split('-').map(Number);
-    return Array.from({length:12},(_,i)=>localDate(new Date(year,month-12+i,1)).slice(0,7));
-  }
-  function evaluationHtml(data,interactive) {
-    const reviewed=data.filter(e=>reviewable(e) && typeof e.isNecessary === 'boolean');
-    const yes=reviewed.filter(e=>e.isNecessary).reduce((n,e)=>n+expenseAmount(e),0);
-    const no=reviewed.filter(e=>!e.isNecessary).reduce((n,e)=>n+expenseAmount(e),0);
-    const total=yes+no;
-    return '<div>必要 '+(total?Math.round(yes/total*100):0)+'%<br><b>'+yen(yes)+'</b></div>'+
-      '<div '+(interactive?'onclick="showWasteDetails()" style="cursor:pointer"':'')+'>無駄 '+(total?Math.round(no/total*100):0)+'%<br><b>'+yen(no)+'</b>'+(interactive?'<br><small>明細を表示</small>':'')+'</div>';
-  }
-  function renderAccountingCharts(data,month,isIncome=false,admin=false) {
-    const prefix=admin?'admin':'';
-    const monthData=data.filter(e=>e.date.startsWith(month) && !internalTax(e));
-    const category=e=>isIncome?e.source:expenseCategory(e);
-    const amount=e=>isIncome?numberValue(e.amount):expenseAmount(e);
-    const totals=new Map();
-    monthData.forEach(e=>totals.set(category(e),(totals.get(category(e))||0)+amount(e)));
-    const labels=[...totals.keys()].sort((a,b)=>totals.get(b)-totals.get(a));
-    const colors=labels.map((label,i)=>label==='割引'?'#78b88b':chartColors[i%chartColors.length]);
-    const key=admin?'adminDoughnutChartInstance':'doughnutChartInstance';
-    drawChart(key,admin?'adminExpenseChart':'expenseChart','bar',labels,[{data:labels.map(c=>totals.get(c)),backgroundColor:colors,borderRadius:4}],{
-      responsive:true,indexAxis:'y',scales:{x:{beginAtZero:true}},plugins:{legend:{display:false}},
-      onClick:(_,elements)=>{if(!admin&&elements.length) window.showCategoryDetails(labels[elements[0].index]);}
-    });
-    const legend=document.getElementById(admin?'adminChartLegend':'chartLegend');
-    legend.replaceChildren();
-    if(!isIncome) { const panel=document.createElement('div'); panel.innerHTML=accountingSummaryHtml(monthData); legend.append(panel); }
-    labels.forEach((label,i)=>{
-      const row=document.createElement('li');
-      row.innerHTML='<span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;background:'+colors[i]+'"></span>'+escapeHtml(label)+'</span><b>'+yen(totals.get(label))+'</b>';
-      if(!admin) row.onclick=()=>window.showCategoryDetails(label);
-      legend.append(row);
-    });
-    const totalRow=document.createElement('li'); totalRow.innerHTML='<b>'+(isIncome?'収入合計':'実支払額')+'</b><b>'+yen(monthData.reduce((n,e)=>n+amount(e),0))+'</b>';legend.append(totalRow);
-    const blocks=[0,0,0];
-    monthData.forEach(e=>blocks[Math.min(2,Math.floor((Number(e.date.slice(8))-1)/10))]+=amount(e));
-    drawChart(admin?'adminTenDaysChartInstance':'tenDaysChartInstance',admin?'adminTenDaysChart':'tenDaysChart','bar',['上旬','中旬','下旬'],[{data:blocks,backgroundColor:barColors}],{responsive:true,scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}});
-    if(!admin) document.getElementById('tenDaysLegend').innerHTML=blocks.map((v,i)=>'<li><span>'+['上旬','中旬','下旬'][i]+'</span><b>'+yen(v)+'</b></li>').join('');
-    const months=twelveMonths(month);
-    const cats=[...new Set(data.map(category))].filter(Boolean);
-    const datasets=cats.map((cat,i)=>({
-      label:cat,backgroundColor:cat==='割引'?'#78b88b':chartColors[i%chartColors.length],
-      data:months.map(m=>data.filter(e=>e.date.startsWith(m)&&category(e)===cat).reduce((n,e)=>n+amount(e),0))
-    }));
-    document.getElementById(admin?'adminTrendChartContainer':'trendChartContainer').style.minWidth='180%';
-    drawChart(admin?'adminTrendChartInstance':'trendChartInstance',admin?'adminTrendChart':'trendChart','bar',months,datasets,{
-      responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}}}
-    });
-    if(!isIncome) {
-      document.getElementById(admin?'adminEvaluationStats':'evaluationStats').innerHTML=evaluationHtml(monthData,!admin);
-      const ratios=months.map(m=>{
-        let yes=0,no=0;data.filter(e=>e.date.startsWith(m)&&reviewable(e)).forEach(e=>{if(e.isNecessary===true)yes+=amount(e);if(e.isNecessary===false)no+=amount(e)});
-        return yes+no?[yes/(yes+no)*100,no/(yes+no)*100]:[0,0];
-      });
-      document.getElementById(admin?'adminEvalTrendChartContainer':'evalTrendChartContainer').style.minWidth='180%';
-      drawChart(admin?'adminEvalTrendChartInstance':'evalTrendChartInstance',admin?'adminEvalTrendChart':'evalTrendChart','bar',months,[
-        {label:'必要(%)',data:ratios.map(r=>r[0]),backgroundColor:chartColors[0]},
-        {label:'無駄(%)',data:ratios.map(r=>r[1]),backgroundColor:chartColors[4]}
-      ],{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,min:0,max:100}},plugins:{legend:{position:'bottom'}}});
-    }
-  }
   window.renderCharts = function() {
-    const month=document.getElementById('monthSelector').value;
-    const isIncome=window.currentAnalysisMode==='income';
-    ['evaluationCard','pointAnalysisCard','evalTrendCard'].forEach(id=>document.getElementById(id).classList.toggle('hidden',isIncome||!month));
-    document.getElementById('analysisMainTitle').textContent=isIncome?'月次内訳（収入）':'月次内訳（割引を相殺）';
-    document.getElementById('trendChartTitle').textContent=isIncome?'一年間の推移（収入源別）':'一年間の推移（割引・ポイント値引き含む）';
-    document.getElementById('tenDaysTitle').textContent=month+' の10日ごと推移';
-    if(!month) {
-      ['doughnutChartInstance','tenDaysChartInstance','trendChartInstance','evalTrendChartInstance','pointChartInstance'].forEach(destroyChart);
-      ['chartLegend','tenDaysLegend','pointChartLegend','evaluationStats'].forEach(id=>document.getElementById(id).replaceChildren());
+    const selectedMonth = document.getElementById('monthSelector').value;
+    if (!selectedMonth) {
+      if (window.doughnutChartInstance) window.doughnutChartInstance.destroy();
+      if (window.tenDaysChartInstance) window.tenDaysChartInstance.destroy();
+      if (window.trendChartInstance) window.trendChartInstance.destroy();
+      if (window.evalTrendChartInstance) window.evalTrendChartInstance.destroy();
+      if (window.pointChartInstance) window.pointChartInstance.destroy();
       return;
     }
-    renderAccountingCharts(isIncome?window.incomes:window.expenses,month,isIncome);
-    const pointTotals=new Map();
-    window.expenses.filter(e=>e.isPoint&&e.date.startsWith(month)).forEach(e=>pointTotals.set(e.pointType||'ポイント',(pointTotals.get(e.pointType||'ポイント')||0)-expenseAmount(e)));
-    const pts=[...pointTotals.keys()];
-    document.getElementById('pointChart').classList.toggle('hidden',isIncome||!pts.length);
-    destroyChart('pointChartInstance');
-    if(!isIncome&&pts.length) drawChart('pointChartInstance','pointChart','bar',pts,[{data:pts.map(p=>pointTotals.get(p)),backgroundColor:chartColors}],{responsive:true,scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}});
-    document.getElementById('pointChartLegend').innerHTML=pts.length?pts.map(p=>'<li><span>'+escapeHtml(p)+'</span><b>'+yen(pointTotals.get(p))+' 節約</b></li>').join(''):'<li>ポイント利用はありません</li>';
-  };
-  window.renderAdminCharts = function() {
-    const uid=document.getElementById('adminUserSelect').value;
-    const month=document.getElementById('adminMonthSelector').value;
-    if(!uid||!month) {
-      ['adminDoughnutChartInstance','adminTenDaysChartInstance','adminTrendChartInstance','adminEvalTrendChartInstance'].forEach(destroyChart);
-      ['adminChartLegend','adminEvaluationStats'].forEach(id=>document.getElementById(id).replaceChildren());
-      return;
+
+    document.getElementById('tenDaysTitle').innerText = `${selectedMonth} の10日ごと推移`;
+    let chartData = window.currentAnalysisMode === 'expense' ? window.expenses : window.incomes;
+    const monthData = chartData.filter(e => e.date.startsWith(selectedMonth));
+    const totals = {};
+    let monthTotal = 0;
+    
+    let pointTotals = {};
+    let pointTotalAmount = 0;
+
+    if(window.currentAnalysisMode === 'expense') {
+      document.getElementById('evaluationCard').classList.remove('hidden');
+      document.getElementById('pointAnalysisCard').classList.remove('hidden');
+      let yesTotal = 0;
+      let noTotal = 0;
+
+      monthData.forEach(e => {
+        if (e.isPoint) {
+          if (e.pointAmount > 0) {
+            if(!pointTotals[e.pointType]) pointTotals[e.pointType] = 0;
+            pointTotals[e.pointType] += e.pointAmount;
+            pointTotalAmount += e.pointAmount;
+          }
+          return;
+        }
+
+        const cost = e.price + e.tax;
+        if(totals[e.category] !== undefined) totals[e.category] += cost;
+        else totals[e.category] = cost;
+        monthTotal += cost;
+        
+        if (e.isNecessary === true && e.name !== "外税(消費税)") {
+          yesTotal += cost;
+        } else if (e.isNecessary === false) {
+          noTotal += cost;
+        }
+      });
+      
+      const reviewedTotal = yesTotal + noTotal;
+      const yesPct = reviewedTotal === 0 ? 0 : Math.round((yesTotal / reviewedTotal) * 100);
+      const noPct = reviewedTotal === 0 ? 0 : Math.round((noTotal / reviewedTotal) * 100);
+      
+      document.getElementById('evaluationStats').innerHTML = `
+        <div style="flex:1; text-align:center;">
+          <div style="font-size:14px; color:#888; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">thumb_up</span> 必要 (${yesPct}%)</div>
+          <div style="font-weight:bold; color:var(--green-text); font-size: 18px;">¥${yesTotal.toLocaleString()}</div>
+        </div>
+        <div style="flex:1; text-align:center; border-left:1px solid var(--border-color); cursor:pointer; padding-bottom: 4px;" onclick="showWasteDetails()">
+          <div style="font-size:14px; color:#888; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">thumb_down</span> 無駄 (${noPct}%)</div>
+          <div style="font-weight:bold; color:var(--red-text); font-size: 18px;">¥${noTotal.toLocaleString()}</div>
+          <div style="color:var(--red-text); font-size:13px; margin-top: 8px; font-weight:bold;">
+            <span style="border-bottom: 1px solid var(--red-text); padding-bottom: 1px; display:inline-flex; align-items:center; gap:4px;">品目を詳しくみる <span class="material-symbols-outlined" style="font-size:14px;">search</span></span>
+          </div>
+        </div>
+      `;
+
+      // ポイントグラフ描画
+      if (pointTotalAmount > 0) {
+        const ptCtx = document.getElementById('pointChart').getContext('2d');
+        if (window.pointChartInstance) window.pointChartInstance.destroy();
+        
+        window.pointChartInstance = new Chart(ptCtx, {
+          type: 'doughnut',
+          data: { labels: Object.keys(pointTotals), datasets: [{ data: Object.values(pointTotals), backgroundColor: chartColors, borderWidth: 0 }] },
+          options: { responsive: true, plugins: { legend: { display: false } }, cutout: '70%' }
+        });
+        
+        let pLegendHtml = '';
+        let pColorIndex = 0;
+        for (const ptCat of Object.keys(pointTotals).sort((a,b) => pointTotals[b] - pointTotals[a])) {
+          const val = pointTotals[ptCat];
+          const pct = pointTotalAmount === 0 ? 0 : Math.round((val / pointTotalAmount) * 100);
+          const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${chartColors[pColorIndex % chartColors.length]};margin-right:8px;"></span>`;
+          pLegendHtml += `<li><div>${dot}${ptCat}</div> <div><span>${val.toLocaleString()} pt</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+          pColorIndex++;
+        }
+        pLegendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:var(--primary); font-weight:bold;">${pointTotalAmount.toLocaleString()} pt</span></li>`;
+        document.getElementById('pointChartLegend').innerHTML = pLegendHtml;
+        document.getElementById('pointChart').classList.remove('hidden');
+      } else {
+        if (window.pointChartInstance) window.pointChartInstance.destroy();
+        document.getElementById('pointChart').classList.add('hidden');
+        document.getElementById('pointChartLegend').innerHTML = '<li style="justify-content:center; color:#888; padding:20px; border:none; cursor:default;">ポイント利用はありません</li>';
+      }
+
+    } else {
+      document.getElementById('evaluationCard').classList.add('hidden');
+      document.getElementById('pointAnalysisCard').classList.add('hidden');
+      monthData.forEach(i => {
+        if(!totals[i.source]) totals[i.source] = 0;
+        totals[i.source] += i.amount; monthTotal += i.amount;
+      });
     }
-    renderAccountingCharts(allExpenses.filter(e=>e.appUserId===uid),month,false,true);
+
+    const currentPieColors = window.currentAnalysisMode === 'expense' ? chartColors : incomeChartColors;
+    const currentBarColors = window.currentAnalysisMode === 'expense' ? barColors : incomeBarColors;
+
+    const dCtx = document.getElementById('expenseChart').getContext('2d');
+    if (window.doughnutChartInstance) window.doughnutChartInstance.destroy();
+    
+    window.doughnutChartInstance = new Chart(dCtx, {
+      type: 'doughnut',
+      data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: currentPieColors, borderWidth: 0 }] },
+      options: { 
+        responsive: true, plugins: { legend: { display: false } }, cutout: '70%',
+        onClick: (e, elements) => { if (elements.length > 0) window.showCategoryDetails(window.doughnutChartInstance.data.labels[elements[0].index]); }
+      }
+    });
+
+    let legendHtml = '';
+    let colorIndex = 0;
+    for (const cat of Object.keys(totals).sort((a,b) => totals[b] - totals[a])) {
+      const val = totals[cat];
+      const pct = monthTotal === 0 ? 0 : Math.round((val / monthTotal) * 100);
+      const dot = `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${currentPieColors[colorIndex % currentPieColors.length]};margin-right:8px;"></span>`;
+      legendHtml += `<li onclick="showCategoryDetails('${cat}')"><div>${dot}${cat}</div> <div><span>¥${val.toLocaleString()}</span> <span style="color:#888; font-size:12px; margin-left:8px;">${pct}%</span></div></li>`;
+      colorIndex++;
+    }
+    legendHtml += `<li style="border-top: 1px solid var(--border-color); font-size: 16px; margin-top:8px;"><div>合計</div> <span style="color:${window.currentAnalysisMode === 'expense' ? 'var(--primary)' : 'var(--green-text)'}; font-weight:bold;">¥${monthTotal.toLocaleString()}</span></li>`;
+    document.getElementById('chartLegend').innerHTML = legendHtml;
+
+    let blockTotals = [0, 0, 0]; 
+    monthData.forEach(e => {
+      if (e.isPoint) return;
+      const day = parseInt(e.date.split('-')[2], 10);
+      const amount = window.currentAnalysisMode === 'expense' ? (e.price + e.tax) : e.amount;
+      if (day <= 10) blockTotals[0] += amount;
+      else if (day <= 20) blockTotals[1] += amount;
+      else blockTotals[2] += amount;
+    });
+
+    const tdCtx = document.getElementById('tenDaysChart').getContext('2d');
+    if (window.tenDaysChartInstance) window.tenDaysChartInstance.destroy();
+    window.tenDaysChartInstance = new Chart(tdCtx, {
+      type: 'bar',
+      data: { labels: ['上旬', '中旬', '下旬'], datasets: [{ data: blockTotals, backgroundColor: currentBarColors, borderRadius: 6 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+
+    renderTrendCharts();
   };
 
+  function renderTrendCharts() {
+    let allData = window.currentAnalysisMode === 'expense' ? window.expenses : window.incomes;
+    let allMonths = [...new Set(allData.map(e => e.date.substring(0, 7)))].sort();
+    let targetMonths = allMonths.slice(-12);
+    
+    if(targetMonths.length === 0) {
+      const todayMonth = new Date().toISOString().substring(0, 7);
+      targetMonths = [todayMonth];
+    }
+
+    const minWidth = Math.max(100, targetMonths.length * 15) + '%';
+    document.getElementById('trendChartContainer').style.minWidth = minWidth;
+    document.getElementById('evalTrendChartContainer').style.minWidth = minWidth;
+
+    const tCtx = document.getElementById('trendChart').getContext('2d');
+    if (window.trendChartInstance) window.trendChartInstance.destroy();
+
+    const evalCard = document.getElementById('evalTrendCard');
+    const etCtx = document.getElementById('evalTrendChart').getContext('2d');
+    if (window.evalTrendChartInstance) window.evalTrendChartInstance.destroy();
+
+    if (window.currentAnalysisMode === 'expense') {
+      document.getElementById('trendChartTitle').innerText = '一年間の推移 (出費項目別)';
+      evalCard.classList.remove('hidden');
+
+      const expenseCategories = [...new Set(window.expenses.map(e => e.category))].filter(c => c !== "ポイント利用");
+      const datasets = expenseCategories.map((cat, i) => {
+        return {
+          label: cat,
+          data: targetMonths.map(m => {
+            return window.expenses.filter(e => e.date.startsWith(m) && e.category === cat && !e.isPoint).reduce((sum, e) => sum + e.price + e.tax, 0);
+          }),
+          backgroundColor: chartColors[i % chartColors.length]
+        };
+      });
+
+      window.trendChartInstance = new Chart(tCtx, {
+        type: 'bar',
+        data: { labels: targetMonths, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }
+        }
+      });
+
+      const yesData = [];
+      const noData = [];
+      targetMonths.forEach(m => {
+        let y = 0, n = 0;
+        window.expenses.filter(e => e.date.startsWith(m) && !e.isPoint).forEach(e => {
+          const cost = e.price + e.tax;
+          if (e.isNecessary === true && e.name !== "外税(消費税)") y += cost;
+          else if (e.isNecessary === false) n += cost;
+        });
+        const total = y + n;
+        if(total > 0) {
+          yesData.push(Math.round((y / total) * 100));
+          noData.push(Math.round((n / total) * 100));
+        } else {
+          yesData.push(0);
+          noData.push(0);
+        }
+      });
+
+      window.evalTrendChartInstance = new Chart(etCtx, {
+        type: 'bar',
+        data: {
+          labels: targetMonths,
+          datasets: [
+            { label: '必要(%)', data: yesData, backgroundColor: chartColors[0], borderColor: chartColors[0], borderWidth: 1 },
+            { label: '無駄(%)', data: noData, backgroundColor: chartColors[4], borderColor: chartColors[4], borderWidth: 1 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, min: 0, max: 100, ticks: { callback: function(value) { return value + "%" } } }
+          },
+          plugins: {
+            tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + '%'; } } },
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } }
+          }
+        }
+      });
+
+    } else {
+      document.getElementById('trendChartTitle').innerText = '一年間の推移 (収入源別)';
+      evalCard.classList.add('hidden');
+
+      const allSources = [...new Set(window.incomes.map(i => i.source))];
+      const datasets = allSources.map((src, i) => {
+        return {
+          label: src,
+          data: targetMonths.map(m => {
+            return window.incomes.filter(inc => inc.date.startsWith(m) && inc.source === src).reduce((sum, inc) => sum + inc.amount, 0);
+          }),
+          backgroundColor: incomeChartColors[i % incomeChartColors.length]
+        };
+      });
+
+      window.trendChartInstance = new Chart(tCtx, {
+        type: 'bar',
+        data: { labels: targetMonths, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }
+        }
+      });
+    }
+  }
 
   window.getExpertAIAdvice = async function() {
     const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKey').value.trim();
@@ -3646,15 +3838,14 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
 
     const adviceElem = document.getElementById('aiAdvice');
     adviceElem.innerText = "経理の専門家AIがデータを精査しています...";
-    window.setAdviceProgress(10,"データを準備中");
     
     let isExp = window.currentAnalysisMode === 'expense';
     let monthData = (isExp ? window.expenses : window.incomes).filter(e => e.date.startsWith(selectedMonth));
     let blockTotals = [0, 0, 0];
     monthData.forEach(e => {
-      if (internalTax(e)) return;
+      if (e.isPoint) return;
       const day = parseInt(e.date.split('-')[2], 10);
-      blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += isExp ? (expenseAmount(e)) : e.amount;
+      blockTotals[day <= 10 ? 0 : day <= 20 ? 1 : 2] += isExp ? (e.price + e.tax) : e.amount;
     });
 
     const payload = {
@@ -3663,9 +3854,9 @@ Remove store branch. Categories: ${allowedCategories.join(',')}. ${catInstructio
 Rules:
 1. Must output in Japanese.
 2. Comment on the 10-day spending/income pace (Early, Mid, Late month).
-3. Negative amounts are discounts/point redemptions; include them in net spending and report savings. Suggest specific improvements; v=true necessary, false=waste.
+3. Suggest specific improvements based on categories, items, and necessity (v: true=necessary, false=waste).
 Month: ${selectedMonth} | Early(1-10th): ¥${blockTotals[0]}, Mid(11-20th): ¥${blockTotals[1]}, Late(21st+): ¥${blockTotals[2]}
-Data: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:expenseCategory(e), a:expenseAmount(e), v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
+Data: ${JSON.stringify(monthData.filter(e=>!e.isPoint).map(e => isExp ? {d:e.date, n:e.name, c:e.category, a:e.price, v:e.isNecessary} : {d:e.date, s:e.source, a:e.amount}))}`
         }]
       }],
       generationConfig: {
@@ -3675,7 +3866,6 @@ Data: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:expense
 
     const targetModel = 'gemini-4-hydrogen';
     let response;
-    window.setAdviceProgress(30,"AIが診断中");
     try {
       response = await window.fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST', 
@@ -3683,13 +3873,11 @@ Data: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:expense
         body: JSON.stringify(payload)
       });
     } catch(fetchError) {
-      window.setAdviceProgress(0,"診断を完了できませんでした");
       adviceElem.innerText = "ネットワークエラーが発生しました。";
       return;
     }
 
     if (!response.ok) {
-      window.setAdviceProgress(0,"診断を完了できませんでした");
       adviceElem.innerText = `分析に失敗しました。(${response.status})`;
       return;
     }
@@ -3697,10 +3885,8 @@ Data: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:expense
     try {
       const result = await response.json();
       adviceElem.innerText = result.candidates[0].content.parts[0].text;
-      window.setAdviceProgress(100,"診断完了");
     } catch (error) { 
       console.error(error);
-      window.setAdviceProgress(0,"結果を読み取れませんでした");
       adviceElem.innerText = `分析結果の読み取りに失敗しました。`; 
     }
   };
@@ -3713,222 +3899,12 @@ Data: ${JSON.stringify(monthData.map(e => isExp ? {d:e.date, n:e.name, c:expense
     const headers = isInc ? ["ID", "日付", "収入源", "金額", "備考"] : ["ID", "日付", "店名", "商品名", "単価", "数量", "消費税", "総額", "カテゴリ", "評価", "ポイント種別", "利用ポイント", "備考"];
     const rows = dataList.map(e => isInc ? 
       [e.id, e.date, e.source, e.amount, e.memo] : 
-      [e.id, e.date, e.store, e.name, e.unit_price, e.qty, e.tax, expenseAmount(e), e.category, e.isNecessary === true ? 'YES' : e.isNecessary === false ? 'NO' : '未', e.pointType || '', e.pointAmount || '', e.memo]
+      [e.id, e.date, e.store, e.name, e.unit_price, e.qty, e.tax, e.price + e.tax, e.category, e.isNecessary === true ? 'YES' : e.isNecessary === false ? 'NO' : '未', e.pointType || '', e.pointAmount || '', e.memo]
     );
     
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.join(",") + "\n" + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement('a'); link.href = encodeURI(csvContent); link.download = `${isInc ? 'incomes' : 'expenses'}_${window.currentUser}_${window.currentBookId}.csv`; link.click();
   };
-
-  window.kakeibotToday=localDate;
-  window.setOcrProgress = function(percent,stage) {
-    document.getElementById('ocrProgress').classList.remove('hidden');
-    document.getElementById('ocrProgressBar').value=percent;
-    document.getElementById('ocrProgressPercent').textContent=percent+'%';
-    document.getElementById('ocrProgressStage').textContent=stage;
-  };
-  window.updateOcrYearWarning = function() {
-    const input=document.getElementById('ocrBatchDate').value;
-    const scanned=window.ocrScanDate||localDate();
-    const warning=document.getElementById('ocrYearWarning');
-    warning.classList.toggle('hidden',!input||input.slice(0,4)===scanned.slice(0,4));
-    warning.textContent='注意：読み取った日付 '+input+' の年が、スキャン日 '+scanned+' の年と異なります。保存前に日付を確認してください。';
-  };
-  function readLocalArray(key) {try {const v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v:[];}catch{return [];} }
-  window.loans=[];
-  window.loadSchedules = function() {
-    if(!window.currentUser)return;
-    const suffix=window.currentUser+'_'+window.currentBookId;
-    window.subscriptions=readLocalArray('subs_'+suffix);
-    window.scheduledPayments=readLocalArray('sched_'+suffix);
-    window.loans=readLocalArray('loans_'+suffix);
-    window.renderSchedules();
-  };
-  window.saveSchedulesData = function() {
-    if(!window.currentUser)return;
-    const suffix=window.currentUser+'_'+window.currentBookId;
-    localStorage.setItem('subs_'+suffix,JSON.stringify(window.subscriptions));
-    localStorage.setItem('sched_'+suffix,JSON.stringify(window.scheduledPayments));
-    localStorage.setItem('loans_'+suffix,JSON.stringify(window.loans));
-    window.renderSchedules();
-  };
-  function scheduleRow(host,text,amount,actions) {
-    const row=document.createElement('div');row.style.cssText='padding:12px 0;border-bottom:1px solid #eee';
-    const heading=document.createElement('div');heading.textContent=text;row.append(heading);
-    const price=document.createElement('b');price.textContent=yen(amount);row.append(price);
-    const controls=document.createElement('div');controls.style.cssText='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap';
-    actions.forEach(([label,fn])=>{const button=document.createElement('button');button.className='outline';button.textContent=label;button.style.cssText='font-size:12px;padding:6px 10px';button.onclick=fn;controls.append(button);});
-    row.append(controls);host.append(row);
-  }
-  window.renderSchedules = function() {
-    const scheduled=document.getElementById('scheduledPaymentList');scheduled.replaceChildren();
-    [...window.scheduledPayments].sort((a,b)=>a.date.localeCompare(b.date)).forEach(item=>{
-      scheduleRow(scheduled,item.date+' / '+item.name+' / '+item.category+(item.memo?' / '+item.memo:''),item.amount,[
-        ['出費に反映',()=>window.reflectScheduledPayment(item.id)],['編集',()=>window.editScheduledPayment(item.id)],['削除',()=>window.deleteScheduledPayment(item.id)]
-      ]);
-    });
-    if(!scheduled.childElementCount)scheduled.textContent='予定されている支払いはありません';
-    const subs=document.getElementById('subscriptionList');subs.replaceChildren();
-    const month=localDate().slice(0,7);
-    [...window.subscriptions].sort((a,b)=>a.day-b.day).forEach(sub=>{
-      const actions=[['編集',()=>window.editSubscription(sub.id)],['解除',()=>window.deleteSubscription(sub.id)]];
-      if(sub.lastReflectedMonth!==month)actions.unshift(['今月分を計上',()=>window.reflectSubscription(sub.id)]);
-      scheduleRow(subs,'毎月 '+(sub.day===99?'月末':sub.day+'日')+' / '+sub.name+(sub.lastReflectedMonth===month?' / 今月計上済':''),sub.amount,actions);
-    });
-    if(!subs.childElementCount)subs.textContent='登録されているサブスクはありません';
-    window.renderLoans();
-  };
-  window.editSubscription = function(id) {
-    const sub=window.subscriptions.find(s=>s.id===id);if(!sub)return;
-    window.scheduleEdit={type:'sub',id,user:window.currentUser,book:window.currentBookId};
-    document.getElementById('scheduleEditTitle').textContent='固定費の編集';
-    document.getElementById('scheduleEditDateWrap').classList.add('hidden');
-    document.getElementById('scheduleEditDayWrap').classList.remove('hidden');
-    document.getElementById('scheduleEditDay').value=sub.day;
-    document.getElementById('scheduleEditName').value=sub.name;document.getElementById('scheduleEditAmount').value=sub.amount;
-    window.populateScheduleEditCategory(sub.category);document.getElementById('scheduleEditMemo').value=sub.memo||'';
-    document.getElementById('scheduleEditModal').classList.remove('hidden');
-  };
-  window.editScheduledPayment = function(id) {
-    const item=window.scheduledPayments.find(s=>s.id===id);if(!item)return;
-    window.scheduleEdit={type:'payment',id,user:window.currentUser,book:window.currentBookId};
-    document.getElementById('scheduleEditTitle').textContent='支払予定の編集';
-    document.getElementById('scheduleEditDateWrap').classList.remove('hidden');document.getElementById('scheduleEditDayWrap').classList.add('hidden');
-    document.getElementById('scheduleEditDate').value=item.date;document.getElementById('scheduleEditName').value=item.name;
-    document.getElementById('scheduleEditAmount').value=item.amount;document.getElementById('scheduleEditMemo').value=item.memo||'';
-    window.populateScheduleEditCategory(item.category);document.getElementById('scheduleEditModal').classList.remove('hidden');
-  };
-  window.populateScheduleEditCategory = function(current) {
-    const select=document.getElementById('scheduleEditCategory');
-    select.innerHTML=[...new Set([...window.userCategories,current])].filter(c=>c&&c!=='割引').map(c=>'<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>').join('');
-    select.value=current;
-  };
-  window.saveScheduleEdit = function() {
-    const state=window.scheduleEdit;if(!state||state.user!==window.currentUser||state.book!==window.currentBookId)return alert('対象ブックが変わりました。');
-    const name=document.getElementById('scheduleEditName').value.trim(),amount=Number(document.getElementById('scheduleEditAmount').value),category=document.getElementById('scheduleEditCategory').value;
-    if(!name||!Number.isFinite(amount)||amount<=0)return alert('名前と正の金額を入力してください。');
-    const list=state.type==='sub'?window.subscriptions:window.scheduledPayments;const item=list.find(s=>s.id===state.id);if(!item)return;
-    if(state.type==='sub')item.day=Number(document.getElementById('scheduleEditDay').value);
-    else {const date=document.getElementById('scheduleEditDate').value;if(!validDate(date))return alert('日付を確認してください。');item.date=date;item.memo=document.getElementById('scheduleEditMemo').value.trim();}
-    Object.assign(item,{name,amount,category,memo:document.getElementById('scheduleEditMemo').value.trim()});window.saveSchedulesData();window.closeScheduleEdit();
-  };
-  window.closeScheduleEdit = function(){document.getElementById('scheduleEditModal').classList.add('hidden');window.scheduleEdit=null;};
-  function subscriptionDate(sub,now=new Date()) {
-    const last=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-    const day=sub.day===99?last:Math.min(last,Math.max(1,sub.day));
-    return localDate(new Date(now.getFullYear(),now.getMonth(),day));
-  }
-  window.reflectSubscription = async function(id) {
-    const sub=window.subscriptions.find(s=>s.id===id);const month=localDate().slice(0,7);
-    if(!sub||sub.lastReflectedMonth===month||window.reflecting)return;
-    const user=window.currentUser,book=window.currentBookId;window.reflecting=true;
-    try {
-      await fsSaveExpense({id:'sub_'+user+'_'+book+'_'+id+'_'+month,appUserId:user,bookId:book,date:subscriptionDate(sub),store:'固定費',name:sub.name,unit_price:sub.amount,qty:1,price:sub.amount,tax:0,category:sub.category,memo:sub.memo||'月額固定費',isNecessary:null});
-      sub.lastReflectedMonth=month;
-      if(user===window.currentUser&&book===window.currentBookId)window.saveSchedulesData();
-    }catch(error){alert('保存できませんでした。再試行してください。');}finally{window.reflecting=false;}
-  };
-  window.reflectScheduledPayment = async function(id) {
-    const item=window.scheduledPayments.find(s=>s.id===id);if(!item||window.reflecting)return;
-    const user=window.currentUser,book=window.currentBookId;window.reflecting=true;
-    try {
-      await fsSaveExpense({id:'scheduled_'+user+'_'+book+'_'+id,appUserId:user,bookId:book,date:item.date,store:'引き落とし・予定分',name:item.name,unit_price:item.amount,qty:1,price:item.amount,tax:0,category:item.category,memo:item.memo||'予定から反映',isNecessary:null});
-      if(user===window.currentUser&&book===window.currentBookId){window.scheduledPayments=window.scheduledPayments.filter(s=>s.id!==id);window.saveSchedulesData();}
-    }catch(error){alert('保存できませんでした。再試行してください。');}finally{window.reflecting=false;}
-  };
-  window.openLoanEdit = function(id=null) {
-    const loan=id?window.loans.find(l=>l.id===id):null;
-    window.loanEdit={id,user:window.currentUser,book:window.currentBookId};
-    document.getElementById('loanEditTitle').textContent=loan?'貸し借りを編集':'貸し借りを登録';
-    document.getElementById('loanDirection').value=loan?.direction||'lend';
-    document.getElementById('loanPerson').value=loan?.person||'';
-    document.getElementById('loanAmount').value=loan?.amount||'';
-    document.getElementById('loanRepaid').value=loan?.repaid||0;
-    document.getElementById('loanDate').value=loan?.date||localDate();
-    document.getElementById('loanDueDate').value=loan?.dueDate||'';
-    document.getElementById('loanMemo').value=loan?.memo||'';
-    document.getElementById('loanEditModal').classList.remove('hidden');
-  };
-  window.closeLoanEdit = function(){document.getElementById('loanEditModal').classList.add('hidden');window.loanEdit=null;};
-  window.saveLoan = function() {
-    const state=window.loanEdit;if(!state||state.user!==window.currentUser||state.book!==window.currentBookId)return alert('対象ブックが変わりました。');
-    const direction=document.getElementById('loanDirection').value,person=document.getElementById('loanPerson').value.trim(),amount=Number(document.getElementById('loanAmount').value),repaid=Number(document.getElementById('loanRepaid').value),date=document.getElementById('loanDate').value,dueDate=document.getElementById('loanDueDate').value;
-    if(!person||!Number.isFinite(amount)||amount<=0||!Number.isFinite(repaid)||repaid<0||repaid>amount)return alert('相手・金額・返済済み金額を確認してください。');
-    if(!validDate(date)||(dueDate&&!validDate(dueDate)))return alert('日付を確認してください。');
-    const loan={id:state.id||'loan_'+crypto.randomUUID(),direction,person,amount,repaid,date,dueDate,memo:document.getElementById('loanMemo').value.trim()};
-    const idx=window.loans.findIndex(l=>l.id===loan.id);if(idx<0)window.loans.push(loan);else window.loans[idx]=loan;
-    window.saveSchedulesData();window.closeLoanEdit();
-  };
-  window.deleteLoan = function(id) {
-    if(!confirm('この貸し借りの記録を削除しますか？'))return;
-    window.loans=window.loans.filter(l=>l.id!==id);window.saveSchedulesData();
-  };
-  window.renderLoans = function() {
-    const host=document.getElementById('loanList');if(!host)return;host.replaceChildren();
-    let lend=0,borrow=0;
-    [...window.loans].sort((a,b)=>b.date.localeCompare(a.date)).forEach(loan=>{
-      const remaining=loan.amount-loan.repaid;if(loan.direction==='lend')lend+=remaining;else borrow+=remaining;
-      const status=remaining===0?'完済':(loan.dueDate&&loan.dueDate<localDate()?'期限超過':'未返済');
-      scheduleRow(host,(loan.direction==='lend'?'貸した':'借りた')+' / '+loan.person+' / '+status+' / '+loan.date+(loan.dueDate?' / 返済予定 '+loan.dueDate:'')+' / 元金 '+yen(loan.amount)+' / 返済済 '+yen(loan.repaid)+(loan.memo?' / '+loan.memo:''),remaining,[
-        ['編集・返済状況の更新',()=>window.openLoanEdit(loan.id)],['削除',()=>window.deleteLoan(loan.id)]
-      ]);
-    });
-    document.getElementById('loanSummary').textContent='貸している残額 '+yen(lend)+' / 借りている残額 '+yen(borrow);
-    if(!host.childElementCount)host.textContent='貸し借りの記録はありません';
-  };
-  window.addEventListener('DOMContentLoaded',()=>{
-    const options=Array.from({length:31},(_,i)=>'<option value="'+(i+1)+'">毎月 '+(i+1)+'日</option>').join('')+'<option value="99">毎月 月末</option>';
-    document.getElementById('subDay').innerHTML=options;document.getElementById('scheduleEditDay').innerHTML=options;
-  });
-
-  window.saveIncome = async function() {
-    const date=document.getElementById('incomeDate').value,source=document.getElementById('incomeSource').value.trim(),amount=Number(document.getElementById('incomeAmount').value);
-    if(!validDate(date)||!source||!Number.isFinite(amount)||amount<=0)return alert('日付・収入源・金額を確認してください。');
-    try {
-      await fsSaveIncome({id:crypto.randomUUID(),appUserId:window.currentUser,bookId:window.currentBookId,date,source,amount,memo:document.getElementById('incomeMemo').value.trim()});
-      ['incomeSource','incomeAmount','incomeMemo'].forEach(id=>document.getElementById(id).value='');
-      window.updateIncomeHistoryTree();
-    }catch(error){alert('収入を保存できませんでした。');}
-  };
-  window.updateIncomeDatalist = function() {
-    const list=document.getElementById('incomeSourceOptions');list.replaceChildren();
-    [...new Set(window.incomes.map(i=>i.source))].forEach(source=>{const option=document.createElement('option');option.value=source;list.append(option);});
-  };
-  window.updateIncomeHistoryTree = function() {
-    const host=document.getElementById('incomeHistoryList');host.replaceChildren();
-    [...window.incomes].sort((a,b)=>b.date.localeCompare(a.date)).forEach(item=>{
-      const row=document.createElement('div');row.className='history-item';row.style.marginLeft='0';
-      row.innerHTML='<div><b>'+escapeHtml(item.source)+'</b><div>'+escapeHtml(item.date)+'</div><small>'+escapeHtml(item.memo)+'</small></div><b>'+yen(item.amount)+'</b>';
-      row.onclick=()=>window.openEditIncomeModal(item.id);host.append(row);
-    });
-    if(!host.childElementCount)host.textContent='収入履歴がありません';
-  };
-  window.openEditIncomeModal = function(id) {
-    const item=window.incomes.find(i=>i.id===id);if(!item)return;
-    document.getElementById('editIncomeId').value=id;document.getElementById('editIncomeDate').value=item.date;
-    document.getElementById('editIncomeSource').value=item.source;document.getElementById('editIncomeAmount').value=item.amount;document.getElementById('editIncomeMemo').value=item.memo||'';
-    document.getElementById('editIncomeModal').classList.remove('hidden');
-  };
-  window.closeEditIncomeModal = function(){document.getElementById('editIncomeModal').classList.add('hidden');};
-  window.updateIncome = async function() {
-    const item=window.incomes.find(i=>i.id===document.getElementById('editIncomeId').value);if(!item)return;
-    const date=document.getElementById('editIncomeDate').value,source=document.getElementById('editIncomeSource').value.trim(),amount=Number(document.getElementById('editIncomeAmount').value);
-    if(!validDate(date)||!source||!Number.isFinite(amount)||amount<=0)return alert('日付・収入源・金額を確認してください。');
-    try {await fsSaveIncome({...item,date,source,amount,memo:document.getElementById('editIncomeMemo').value});window.closeEditIncomeModal();window.updateIncomeHistoryTree();}
-    catch(error){alert('収入を更新できませんでした。');}
-  };
-  window.deleteIncome = async function() {
-    if(!confirm('この収入の記録を削除しますか？'))return;
-    try {await fsDeleteIncome(document.getElementById('editIncomeId').value);window.closeEditIncomeModal();window.updateIncomeHistoryTree();}
-    catch(error){alert('削除できませんでした。');}
-  };
-  window.setAdviceProgress=function(percent,stage){
-    document.getElementById('adviceProgress').classList.remove('hidden');
-    document.getElementById('adviceProgressBar').value=percent;
-    document.getElementById('adviceProgressPercent').textContent=percent+'%';
-    document.getElementById('adviceProgressStage').textContent=stage;
-  };
-
 </script>
 </body>
 </html>
